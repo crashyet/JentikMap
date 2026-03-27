@@ -72,7 +72,16 @@ const MapControls = () => {
       visualizePitch: true,
     })
     map.addControl(nav, "bottom-right")
-    return () => map.removeControl(nav)
+    return () => {
+      // Defensive check: only remove if map instance is still valid and has a container
+      if (map && map.getContainer()) {
+        try {
+          map.removeControl(nav)
+        } catch (e) {
+          console.warn("Failed to remove map control:", e)
+        }
+      }
+    }
   }, [map])
 
   return null
@@ -91,7 +100,16 @@ const MapMarker = ({ lngLat, children, className }) => {
       .setLngLat(lngLat)
       .addTo(map)
 
-    return () => marker.remove()
+    return () => {
+      // Defensive check: only remove if map instance is still valid and has a container
+      if (map && map.getContainer()) {
+        try {
+          marker.remove()
+        } catch (e) {
+          console.warn("Failed to remove map marker:", e)
+        }
+      }
+    }
   }, [map, lngLat])
 
   return (
