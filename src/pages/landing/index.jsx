@@ -1,5 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import Navbar from '../../components/layout/navbar';
 import Footer from '../../components/layout/footer';
 import heroImg from '../../assets/hero.png';
@@ -17,7 +18,8 @@ const LandingPage = () => {
         <svg className="w-6 h-6 text-[#008AC9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A2 2 0 013 15.382V5.618a2 2 0 011.553-1.96l6-1.5a2 2 0 011.894 0l6 1.5a2 2 0 011.553 1.96v9.764a2 2 0 01-1.106 1.789L15 20m-6 0l6-1.5m-6 1.5V9m6 4.5V20" />
         </svg>
-      )
+      ),
+      path: '/map'
     },
     {
       title: 'Lapor Cepat',
@@ -27,7 +29,8 @@ const LandingPage = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-      )
+      ),
+      path: '/report'
     },
     {
       title: 'Smart Scanning',
@@ -36,7 +39,8 @@ const LandingPage = () => {
         <svg className="w-6 h-6 text-[#008AC9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
-      )
+      ),
+      path: '/scan'
     },
     {
       title: 'Radar Warga',
@@ -45,7 +49,9 @@ const LandingPage = () => {
         <svg className="w-6 h-6 text-[#008AC9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-      )
+      ),
+      path: '/radar',
+      disabled: true
     }
   ];
 
@@ -88,13 +94,30 @@ const LandingPage = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((item, idx) => (
-              <div key={idx} className="p-8 rounded-3xl border border-gray-100 hover:border-blue-100 hover:shadow-2xl hover:shadow-blue-50 transition-all group">
-                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Link 
+                key={idx} 
+                to={item.disabled ? "#" : item.path}
+                className={cn(
+                  "p-8 rounded-3xl border border-gray-100 transition-all group block text-left relative overflow-hidden",
+                  item.disabled 
+                    ? "opacity-60 cursor-not-allowed bg-gray-50" 
+                    : "hover:border-blue-100 hover:shadow-2xl hover:shadow-blue-50 bg-white"
+                )}
+              >
+                {item.disabled && (
+                  <div className="absolute top-4 right-0 transform rotate-45 translate-x-1/2 -translate-y-1/2 bg-gray-200 text-gray-500 px-10 py-1 text-[10px] font-bold uppercase tracking-widest border-b border-gray-300">
+                    Segera
+                  </div>
+                )}
+                <div className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-transform",
+                  item.disabled ? "bg-gray-100 grayscale" : "bg-blue-50 group-hover:scale-110"
+                )}>
                   {item.icon}
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">{item.title}</h3>
+                <h3 className={cn("text-lg font-bold mb-3", item.disabled ? "text-gray-400" : "text-gray-900")}>{item.title}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

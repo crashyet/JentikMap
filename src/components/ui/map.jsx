@@ -12,6 +12,9 @@ const Map = React.forwardRef(
       center = [108.99, -7.71], // Cilacap default
       zoom = 13,
       style = "https://demotiles.maplibre.org/style.json",
+      onClick,
+      onMove,
+      onMoveEnd,
       children,
       ...props
     },
@@ -33,6 +36,18 @@ const Map = React.forwardRef(
 
       mapInstance.on("load", () => {
         setMap(mapInstance)
+      })
+
+      mapInstance.on("click", (e) => {
+        if (onClick) onClick(e)
+      })
+
+      mapInstance.on("move", (e) => {
+        if (onMove) onMove(e)
+      })
+
+      mapInstance.on("moveend", (e) => {
+        if (onMoveEnd) onMoveEnd(e)
       })
 
       if (ref) {
