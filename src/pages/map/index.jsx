@@ -3,20 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import shieldImg from '../../assets/shield.png';
 import { Map, MapControls, MapMarker } from '@/components/ui/map';
 import { cn } from '@/lib/utils';
-import wargaIcon from '../../assets/warga.png';
-import kaderIcon from '../../assets/kader.png';
+import { Search, Crosshair, Plus, ShieldAlert } from 'lucide-react';
 
 const MapPage = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [mapTheme, setMapTheme] = useState('voyager');
+  const [mapTheme] = useState('voyager');
 
   const mapStyles = {
-    liberty: "https://tiles.openfreemap.org/styles/liberty",
     voyager: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
-    positron: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-    dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
   };
 
   const markers = [
@@ -32,139 +27,144 @@ const MapPage = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'aman': return 'bg-green-500 ring-green-400';
-      case 'waspada': return 'bg-yellow-500 ring-yellow-400';
-      case 'bahaya': return 'bg-red-500 ring-red-400';
-      default: return 'bg-gray-500 ring-gray-400';
+      case 'aman': return { core: 'bg-emerald-500', ring: 'bg-emerald-400', border: 'border-emerald-100' };
+      case 'waspada': return { core: 'bg-amber-500', ring: 'bg-amber-400', border: 'border-amber-100' };
+      case 'bahaya': return { core: 'bg-rose-500', ring: 'bg-rose-400', border: 'border-rose-100' };
+      default: return { core: 'bg-slate-500', ring: 'bg-slate-400', border: 'border-slate-100' };
     }
   };
 
   return (
-    <div className="relative w-full h-screen bg-gray-100 overflow-hidden font-sans">
+    <div className="relative w-full h-screen bg-slate-50 overflow-hidden font-sans selection:bg-[#008AC9]/20">
+
       {/* Interactive Map Component */}
       <Map
-        key={mapTheme} // Force re-render on theme change
+        key={mapTheme}
         center={[109.01, -7.71]}
         zoom={14}
         style={mapStyles[mapTheme]}
-        className="transition-all duration-500"
+        className="transition-all duration-500 ease-in-out"
       >
         <MapControls />
-        {markers.map((marker) => (
-          <MapMarker key={marker.id} lngLat={marker.lngLat}>
-            <div className="relative group">
-              {/* Pulsing ring */}
-              <div className={`absolute inset-0 w-12 h-12 -m-4 rounded-full animate-ping opacity-20 ${getStatusColor(marker.status).split(' ')[1]}`}></div>
-              {/* Glow effect */}
-              <div className={`absolute inset-0 w-16 h-16 -m-6 rounded-full blur-xl opacity-30 ${getStatusColor(marker.status).split(' ')[0]}`}></div>
+        {markers.map((marker) => {
+          const colors = getStatusColor(marker.status);
+          return (
+            <MapMarker key={marker.id} lngLat={marker.lngLat}>
+              <div className="relative group cursor-pointer">
+                {/* Pulsing ring */}
+                <div className={cn("absolute inset-0 w-12 h-12 -m-4 rounded-full animate-ping opacity-20", colors.ring)}></div>
+                {/* Glow effect */}
+                <div className={cn("absolute inset-0 w-16 h-16 -m-6 rounded-full blur-xl opacity-30", colors.core)}></div>
 
-              {/* Main marker dot */}
-              <div className={`relative w-6 h-6 rounded-full border-4 border-white shadow-xl transition-transform group-hover:scale-125 ${getStatusColor(marker.status).split(' ')[0]}`}></div>
+                {/* Main marker dot */}
+                <div className={cn(
+                  "relative w-6 h-6 rounded-full border-[3px] border-white shadow-md transition-transform duration-300 group-hover:scale-125",
+                  colors.core
+                )}></div>
 
-              {/* Label */}
-              <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-lg shadow-lg text-[10px] font-bold text-gray-700 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all border border-gray-100">
-                {marker.label}
+                {/* Tooltip Label */}
+                <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-xl text-xs font-bold text-slate-700 whitespace-nowrap opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 border border-white/50 flex items-center gap-2">
+                  <div className={cn("w-2 h-2 rounded-full", colors.core)}></div>
+                  {marker.label}
+                </div>
               </div>
-            </div>
-          </MapMarker>
-        ))}
+            </MapMarker>
+          );
+        })}
       </Map>
 
-      {/* Top Floating Bar */}
-      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-4xl z-10">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] p-3 md:p-4 flex items-center justify-between gap-4 border border-white/50">
+      {/* Top Floating Navigation Bar */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-[95%] max-w-3xl z-10">
+        <div className="bg-white/80 backdrop-blur-2xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-2 md:p-3 flex items-center justify-between gap-3 border border-white/60">
+
+          {/* Logo & Back Button */}
           <div
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex items-center gap-3 pl-2 pr-4 cursor-pointer hover:bg-slate-100/50 rounded-full transition-colors py-1"
           >
-            <div className="bg-blue-50 p-2 rounded-xl">
-              <img src={shieldImg} alt="Shield" className="w-5 h-5 object-contain" />
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-2 rounded-full shadow-sm border border-blue-100/50">
+              <ShieldAlert className="w-5 h-5 text-[#008AC9]" />
             </div>
-            <span className="text-lg font-bold text-gray-900 tracking-tight hidden sm:block">Peta Jentik</span>
+            <span className="text-base font-extrabold text-slate-800 tracking-tight hidden sm:block">
+              Jentik<span className="text-[#008AC9]">Map</span>
+            </span>
           </div>
 
-          <div className="flex-1 max-w-md relative">
+          {/* Search Bar */}
+          <div className="flex-1 max-w-sm relative group">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-slate-400 group-focus-within:text-[#008AC9] transition-colors" />
+            </div>
             <input
               type="text"
-              placeholder="Cari Lokasi"
+              placeholder="Cari desa atau kecamatan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50/50 border border-gray-100 rounded-xl py-2.5 px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#008AC9]/20 focus:bg-white transition-all placeholder:text-gray-400"
+              className="w-full bg-slate-100/50 border-transparent focus:border-[#008AC9]/30 rounded-full py-2.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white transition-all placeholder:text-slate-400 font-medium text-slate-700"
             />
-            <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-px bg-gray-100 mx-2 hidden sm:block"></div>
-            <div className="bg-gray-400/20 text-gray-600 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap hidden md:block">
-              Warga
+          {/* Profile/Role Badge */}
+          <div className="flex items-center gap-3 pr-2">
+            <div className="hidden md:flex items-center gap-2 bg-slate-100/80 px-4 py-1.5 rounded-full border border-slate-200/50">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-xs font-bold text-slate-600">Warga</span>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
-              <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#008AC9] to-cyan-400 p-[2px] shadow-sm cursor-pointer hover:scale-105 transition-transform">
+              <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-200 flex items-center justify-center">
+                <svg className="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Legend Board (Bottom Left) */}
-      <div className="absolute bottom-10 left-6 z-10">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl p-6 border border-white/50 w-48">
-          <h4 className="text-sm font-bold text-gray-900 mb-4">Tingkat kerawanan</h4>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
-              <span className="text-xs font-bold text-gray-600">Aman</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]"></div>
-              <span className="text-xs font-bold text-gray-600">Waspada</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"></div>
-              <span className="text-xs font-bold text-gray-600">Bahaya</span>
-            </div>
+      <div className="absolute bottom-8 left-6 z-10 hidden sm:block">
+        <div className="bg-white/80 backdrop-blur-2xl rounded-[2rem] shadow-xl p-5 border border-white/60 w-52">
+          <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-4">Indikator Area</h4>
+          <div className="space-y-3.5">
+            {[
+              { label: 'Aman', color: 'bg-emerald-500', shadow: 'shadow-emerald-500/40' },
+              { label: 'Waspada', color: 'bg-amber-500', shadow: 'shadow-amber-500/40' },
+              { label: 'Bahaya', color: 'bg-rose-500', shadow: 'shadow-rose-500/40' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3 group">
+                <div className={cn("w-3.5 h-3.5 rounded-full shadow-sm transition-transform group-hover:scale-125", item.color, item.shadow)}></div>
+                <span className="text-sm font-bold text-slate-600">{item.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex items-center gap-6 z-10">
-        <button className="w-16 h-16 bg-[#008AC9] hover:bg-[#0076ad] text-white rounded-full flex items-center justify-center shadow-[0_15px_30px_-10px_rgba(0,138,201,0.5)] transition-all hover:scale-110 active:scale-90 group">
-          <svg className="w-8 h-8 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+      {/* Center Action Button (Lapor) */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+        <button
+          onClick={() => navigate('/report')}
+          className="group relative flex items-center justify-center"
+        >
+          <div className="absolute inset-0 bg-cyan-400 rounded-full blur-lg opacity-40 group-hover:opacity-60 transition-opacity duration-300"></div>
+          <div className="relative w-16 h-16 bg-gradient-to-tr from-[#008AC9] to-cyan-500 text-white rounded-full flex items-center justify-center shadow-[0_8px_25px_rgba(0,138,201,0.5)] transition-all duration-300 hover:scale-105 active:scale-95 border-4 border-white/20">
+            <Plus className="w-8 h-8 transition-transform duration-300 group-hover:rotate-90" />
+          </div>
+          {/* Lapor Tooltip */}
+          <div className="absolute -top-12 bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none flex items-center gap-1 shadow-xl">
+            Lapor Temuan
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+          </div>
         </button>
       </div>
 
-      <div className="absolute bottom-10 right-8 z-10 flex flex-col gap-4">
-        {/* Theme Switcher */}
-        {/* <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl p-2 border border-white/50 flex flex-col gap-1">
-          {Object.keys(mapStyles).map((style) => (
-            <button
-              key={style}
-              onClick={() => setMapTheme(style)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                mapTheme === style 
-                  ? "bg-[#008AC9] text-white shadow-sm" 
-                  : "text-gray-500 hover:bg-gray-100"
-              )}
-            >
-              {style}
-            </button>
-          ))}
-        </div> */}
-
-        <button className="w-12 h-12 bg-white/90 backdrop-blur-md text-[#008AC9] self-end rounded-full flex items-center justify-center shadow-lg border border-white transition-all hover:bg-white hover:scale-110 active:scale-95">
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
-          </svg>
+      {/* Current Location Button (Bottom Right) */}
+      <div className="absolute bottom-8 right-6 z-10 flex flex-col gap-4">
+        <button className="group w-12 h-12 bg-white/90 backdrop-blur-xl text-slate-600 hover:text-[#008AC9] rounded-2xl flex items-center justify-center shadow-[0_8px_20px_rgb(0,0,0,0.06)] border border-white transition-all duration-300 hover:bg-white hover:scale-105 active:scale-95">
+          <Crosshair className="w-5 h-5 transition-transform duration-500 group-hover:rotate-90 group-hover:scale-110" />
         </button>
       </div>
+
     </div>
   );
 };

@@ -6,6 +6,8 @@ import MapPage from './pages/map'
 import ReportPage from './pages/features/report'
 import ScanPage from './pages/features/scan'
 import RadarPage from './pages/features/radar'
+import HistoryPage from './pages/warga/HistoryPage' // <--- Import baru
+import ProtectedRoute from './components/layout/ProtectedRoute'
 
 function App() {
   return (
@@ -13,11 +15,59 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/map" element={<MapPage />} />
-        <Route path="/report" element={<ReportPage />} />
-        <Route path="/scan" element={<ScanPage />} />
-        <Route path="/radar" element={<RadarPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        
+        {/* Fitur Utama */}
+        <Route 
+          path="/map" 
+          element={
+            <ProtectedRoute allowedRoles={['warga', 'kader', 'admin']}>
+              <MapPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/report" 
+          element={
+            <ProtectedRoute allowedRoles={['warga', 'kader']}>
+              <ReportPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/scan" 
+          element={
+            <ProtectedRoute allowedRoles={['warga', 'kader']}>
+              <ScanPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/radar" 
+          element={
+            <ProtectedRoute allowedRoles={['warga']}>
+              <RadarPage />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Dashboard Spesifik */}
+        <Route 
+          path="/warga/history" 
+          element={
+            <ProtectedRoute allowedRoles={['warga']}>
+              <HistoryPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute allowedRoles={['kader', 'admin']}>
+              <DashboardPage />
+            </ProtectedRoute>
+          } 
+        />
+        
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
@@ -25,4 +75,3 @@ function App() {
 }
 
 export default App
-

@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ShieldAlert, ChevronLeft, Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
 import heroImg from '../../assets/hero.png';
-import wargaIcon from '../../assets/warga.png';
-import kaderIcon from '../../assets/kader.png';
-import AuthService from '../../services/authService';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [role, setRole] = useState('warga');
   const [formData, setFormData] = useState({
     namaLengkap: '',
     email: '',
@@ -15,7 +12,11 @@ const AuthPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const from = location.state?.from?.pathname || '/map';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -28,191 +29,183 @@ const AuthPage = () => {
     setError('');
 
     try {
-      if (isLogin) {
-        await AuthService.login({ 
-          email: formData.email, 
-          password: formData.password,
-          role 
-        });
-        navigate('/dashboard');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      localStorage.setItem('user_token', 'demo_token_123');
+      localStorage.setItem('user_role', 'warga');        
+      
+      if (!isLogin) {
+         localStorage.setItem('user_name', formData.namaLengkap);
       } else {
-        await AuthService.register({ 
-          ...formData, 
-          role 
-        });
-        setIsLogin(true);
-        alert('Registrasi berhasil! Silakan masuk.');
+         localStorage.setItem('user_name', 'Budi Warga'); 
       }
+      
+      navigate(from, { replace: true });
     } catch (err) {
-      setError('Terjadi kesalahan. Silakan coba lagi.');
-      console.error(err);
+      setError('Terjadi kesalahan koneksi. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-white font-sans overflow-hidden">
-      {/* Left Column - Hero Section */}
-      <div className="hidden lg:flex flex-col flex-1 bg-[#008AC9] text-white p-12 relative items-center justify-center overflow-hidden">
-        {/* Background Mascot (Faded) */}
-        <div className="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none">
-          <img src={heroImg} alt="maskot background" className="w-[150%] max-w-none transform rotate-[-15deg]" />
+    <div className="flex min-h-screen bg-white font-sans selection:bg-[#008AC9]/20">
+      
+      <div className="hidden lg:flex flex-col flex-1 bg-gradient-to-br from-[#008AC9] via-[#0076ad] to-cyan-600 text-white p-12 relative overflow-hidden items-center justify-center">
+        
+        <div className="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none transform scale-110">
+          <img src={heroImg} alt="maskot background" className="w-full max-w-none transform rotate-[-15deg]" />
         </div>
 
-        <div className="relative z-10 text-center max-w-md">
-          <div className="mb-6 flex justify-center">
-            <div className="bg-white p-4 rounded-3xl shadow-xl">
-              <img src={heroImg} alt="Jentik Map Logo" className="w-16 h-16 object-contain" />
+        <div className="relative z-10 text-center max-w-md mx-auto">
+          <div className="mb-8 flex justify-center">
+            <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl shadow-2xl border border-white/20">
+              <img src={heroImg} alt="Jentik Map Logo" className="w-20 h-20 object-contain shadow-lg" />
             </div>
           </div>
-          <h1 className="text-5xl font-bold mb-4">Jentik Map</h1>
-          <p className="text-xl leading-relaxed mb-12 font-light">
-            Platform pemantauan jentik nyamuk berbasis peta interaktif untuk pencegahan DBD di Cilacap.
+          
+          <h1 className="text-5xl font-extrabold mb-6 leading-tight tracking-tight">
+            Jentik<span className="text-cyan-200">Map</span> Cilacap
+          </h1>
+          
+          <p className="text-xl leading-relaxed font-light text-blue-50 opacity-90 mb-12">
+            Platform kolaboratif warga dan petugas untuk memantau serta mencegah penyebaran jentik nyamuk DBD secara real-time.
           </p>
 
-          {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 text-center">
-              <div className="text-xl font-bold">1.2K+</div>
-              <div className="text-xs opacity-80 mt-1">Laporan</div>
-            </div>
-            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 text-center">
-              <div className="text-xl font-bold">24</div>
-              <div className="text-xs opacity-80 mt-1">Wilayah</div>
-            </div>
-            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 text-center">
-              <div className="text-xl font-bold">98%</div>
-              <div className="text-xs opacity-80 mt-1">Akurasi</div>
-            </div>
+            {[
+              { label: "Laporan", value: "1.2K+" },
+              { label: "Wilayah", value: "24" },
+              { label: "Validasi AI", value: "98%" }
+            ].map((stat, idx) => (
+              <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center hover:bg-white/20 transition-colors">
+                <div className="text-2xl font-bold text-white">{stat.value}</div>
+                <div className="text-xs opacity-80 mt-1 text-blue-50 font-medium tracking-wide uppercase">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Right Column - Form Section */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50/30 relative">
-        {/* Back Button */}
-        <button 
+      <div className="flex-1 flex flex-col justify-center p-6 md:p-12 relative bg-white overflow-y-auto">
+        
+        <button
           onClick={() => navigate('/')}
-          className="absolute top-8 left-8 flex items-center text-gray-500 hover:text-[#008AC9] transition-colors font-medium text-sm"
+          className="absolute top-6 left-6 md:top-10 md:left-10 flex items-center justify-center w-12 h-12 bg-slate-50 text-slate-500 rounded-full hover:bg-slate-100 hover:text-[#008AC9] transition-all shadow-sm border border-slate-100 group"
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Kembali ke Beranda
+          <ChevronLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
         </button>
 
-        <div className="w-full max-w-md">
-          {/* Role Selection */}
-          <div className="flex gap-4 mb-8">
-            <button 
-              onClick={() => setRole('warga')}
-              className={`flex-1 flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                role === 'warga' 
-                ? 'border-[#008AC9] bg-blue-50/50 ring-4 ring-blue-100/50' 
-                : 'border-transparent bg-white shadow-sm hover:border-gray-200'
-              }`}
+        <div className="w-full max-w-md mx-auto py-12">
+          
+          <div className="text-center mb-10">
+            <div className="lg:hidden inline-flex items-center justify-center w-16 h-16 bg-white shadow-xl rounded-2xl mb-6 border border-slate-100 p-2">
+              <img src={heroImg} alt="logo mobile" className="w-full h-full object-contain" />
+            </div>
+            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+              {isLogin ? 'Selamat Datang Kembali' : 'Bergabung Sekarang'}
+            </h2>
+            <p className="text-slate-500 font-medium">
+              {isLogin ? 'Masuk untuk memantau lingkungan Anda.' : 'Daftar untuk mulai melapor jentik.'}
+            </p>
+          </div>
+
+          <div className="bg-slate-100 p-1.5 rounded-2xl flex mb-8">
+            <button
+              onClick={() => { setIsLogin(true); setError(''); }}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${isLogin ? 'bg-white text-[#008AC9] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              <div className={`p-2 rounded-lg bg-blue-100/50`}>
-                <img src={wargaIcon} alt="Warga" className="w-10 h-10 object-contain" />
-              </div>
-              <span className={`font-semibold ${role === 'warga' ? 'text-[#008AC9]' : 'text-gray-500'}`}>Warga</span>
+              Masuk
             </button>
-            <button 
-              onClick={() => setRole('kader')}
-              className={`flex-1 flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                role === 'kader' 
-                ? 'border-[#008AC9] bg-blue-50/50 ring-4 ring-blue-100/50' 
-                : 'border-transparent bg-white shadow-sm hover:border-gray-200'
-              }`}
+            <button
+              onClick={() => { setIsLogin(false); setError(''); }}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${!isLogin ? 'bg-white text-[#008AC9] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              <div className={`p-2 rounded-lg bg-blue-100/50`}>
-                <img src={kaderIcon} alt="Kader" className="w-10 h-10 object-contain" />
-              </div>
-              <span className={`font-semibold ${role === 'kader' ? 'text-[#008AC9]' : 'text-gray-500'}`}>Kader</span>
+              Daftar
             </button>
           </div>
 
-          {/* Form Card */}
-          <div className="bg-white rounded-4xl p-8 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)]">
-            <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">{isLogin ? 'Masuk' : 'Daftar'}</h2>
-
-            {/* Toggle Tabs */}
-            <div className="bg-gray-100 p-1.5 rounded-full flex mb-8">
-              <button 
-                onClick={() => setIsLogin(true)}
-                className={`flex-1 py-1.5 rounded-full text-sm font-semibold transition-all ${isLogin ? 'bg-[#008AC9] text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Masuk
-              </button>
-              <button 
-                onClick={() => setIsLogin(false)}
-                className={`flex-1 py-1.5 rounded-full text-sm font-semibold transition-all ${!isLogin ? 'bg-[#008AC9] text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Daftar
-              </button>
+          {error && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 text-sm rounded-2xl text-center font-bold flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
+              <ShieldAlert className="w-4 h-4" /> {error}
             </div>
+          )}
 
-            {error && <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg text-center font-medium">{error}</div>}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {!isLogin && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Nama Lengkap</label>
-                  <input 
-                    type="text" 
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {!isLogin && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider ml-1">Nama Lengkap</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-[#008AC9] transition-colors" />
+                  </div>
+                  <input
+                    type="text"
                     name="namaLengkap"
                     value={formData.namaLengkap}
                     onChange={handleInputChange}
-                    placeholder="Masukan Nama Lengkap"
-                    className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-[#008AC9] focus:bg-white outline-none transition-all placeholder:text-gray-300 text-gray-700"
-                    required
+                    placeholder="Masukan nama lengkap Anda"
+                    className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#008AC9] focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white outline-none transition-all text-slate-700 font-medium placeholder:font-normal placeholder:text-slate-400"
+                    required={!isLogin}
                   />
                 </div>
-              )}
-              
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Email</label>
-                <input 
-                  type="email" 
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider ml-1">Email</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-[#008AC9] transition-colors" />
+                </div>
+                <input
+                  type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Masukan Email"
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-[#008AC9] focus:bg-white outline-none transition-all placeholder:text-gray-300 text-gray-700"
+                  placeholder="Contoh: budi@email.com"
+                  className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#008AC9] focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white outline-none transition-all text-slate-700 font-medium placeholder:font-normal placeholder:text-slate-400"
                   required
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Password</label>
-                <input 
-                  type="password" 
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Password</label>
+                {isLogin && <a href="#" className="text-xs font-bold text-[#008AC9] hover:underline">Lupa Password?</a>}
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-[#008AC9] transition-colors" />
+                </div>
+                <input
+                  type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder="Masukan Password"
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-[#008AC9] focus:bg-white outline-none transition-all placeholder:text-gray-300 text-gray-700"
+                  placeholder="Masukan password Anda"
+                  className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#008AC9] focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white outline-none transition-all text-slate-700 font-medium placeholder:font-normal placeholder:text-slate-400"
                   required
                 />
               </div>
+            </div>
 
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full bg-[#008AC9] hover:bg-[#0076ad] text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-70 mt-4 h-[56px] flex items-center justify-center"
-              >
-                {loading ? (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  isLogin ? 'Masuk' : 'Daftar'
-                )}
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group w-full bg-gradient-to-r from-[#008AC9] to-cyan-500 hover:from-[#0076ad] hover:to-cyan-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] active:translate-y-0 disabled:opacity-70 mt-8 flex items-center justify-center gap-2 h-14"
+            >
+              {loading ? (
+                <div className="w-6 h-6 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  {isLogin ? 'Masuk ke Peta' : 'Daftar Sekarang'}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </form> {/* <--- UBAH DI SINI: Dari </case> menjadi </form> */}
         </div>
       </div>
     </div>

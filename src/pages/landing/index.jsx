@@ -1,205 +1,392 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { Shield, ArrowRight, CheckCircle2, Droplets, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Navbar from '../../components/layout/navbar';
 import Footer from '../../components/layout/footer';
 import heroImg from '../../assets/hero.png';
-import wargaIcon from '../../assets/warga.png';
-import kaderIcon from '../../assets/kader.png';
 
-const LandingPage = () => {
-  const navigate = useNavigate();
+const features = [
+  {
+    name: "Peta Rawan",
+    tagline: "Visualisasi Heatmap Real-time",
+    description: "Pantau area rawan jentik di seluruh Cilacap dengan gradasi warna intuitif. Ketahui sebaran kasus dengan cepat dan akurat untuk tindakan preventif.",
+    href: "/map",
+    gif: "/gif/peta.gif",
+    color: "blue",
+    checkpoints: [
+      "Gradasi warna hijau-kuning-merah",
+      "Pembaruan data real-time",
+      "Cakupan seluruh wilayah Cilacap",
+    ],
+    disabled: false
+  },
+  {
+    name: "Lapor Cepat",
+    tagline: "Satu Ketuk, Langsung Terkirim",
+    description: "Menemukan jentik atau genangan air? Laporkan seketika tanpa perlu mengisi form panjang. Cukup buka kamera, potret, dan kirim.",
+    href: "/report",
+    gif: "/gif/lapor.gif",
+    color: "cyan",
+    checkpoints: [
+      "Akses kamera instan",
+      "Deteksi lokasi (GPS) otomatis",
+      "Antarmuka tanpa form ribet",
+    ],
+    disabled: false
+  },
+  {
+    name: "Smart Scanning",
+    tagline: "Validasi AI Otomatis",
+    description: "Kecerdasan Buatan (AI) otomatis memvalidasi setiap foto yang dilaporkan. Memastikan data selalu bersih, akurat, dan mencegah laporan palsu.",
+    href: "/scan",
+    gif: "/gif/smart.gif",
+    color: "emerald",
+    checkpoints: [
+      "Deteksi jentik presisi tinggi",
+      "Penyaringan laporan otomatis",
+      "Proses validasi dalam hitungan detik",
+    ],
+    disabled: false
+  },
+  {
+    name: "Radar Warga",
+    tagline: "Peringatan Dini Area Sekitar",
+    description: "Cek jarak temuan jentik terdekat dari rumahmu. Dapatkan peringatan dini jika ada bahaya atau temuan positif dalam radius 50 meter.",
+    href: "/radar",
+    gif: "/gif/radar.gif",
+    color: "amber",
+    checkpoints: [
+      "Pemantauan radius 50 meter",
+      "Notifikasi peringatan bahaya",
+      "Sistem deteksi lingkungan mandiri",
+    ],
+    disabled: true
+  },
+];
 
-  const features = [
-    {
-      title: 'Peta Rawan Jentik',
-      desc: 'Visualisasi heatmap real-time dengan gradasi hijau-kuning-merah. Zoom, geser, dan pantau area rawan di seluruh Cilacap.',
-      icon: (
-        <svg className="w-6 h-6 text-[#008AC9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A2 2 0 013 15.382V5.618a2 2 0 011.553-1.96l6-1.5a2 2 0 011.894 0l6 1.5a2 2 0 011.553 1.96v9.764a2 2 0 01-1.106 1.789L15 20m-6 0l6-1.5m-6 1.5V9m6 4.5V20" />
-        </svg>
-      ),
-      path: '/map'
-    },
-    {
-      title: 'Lapor Cepat',
-      desc: 'Satu ketuk untuk melaporkan genangan air atau jentik. Tanpa form panjang — langsung buka kamera dan kirim.',
-      icon: (
-        <svg className="w-6 h-6 text-[#008AC9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      path: '/report'
-    },
-    {
-      title: 'Smart Scanning',
-      desc: 'AI otomatis memvalidasi foto. Masukan foto jentik atau screenshot, memastikan data selalu bersih dan akurat.',
-      icon: (
-        <svg className="w-6 h-6 text-[#008AC9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-        </svg>
-      ),
-      path: '/scan'
-    },
-    {
-      title: 'Radar Warga',
-      desc: 'Cek jarak temuan jentik terdekat dari rumahmu. Peringatan dini jika ada bahaya dalam radius 50 meter.',
-      icon: (
-        <svg className="w-6 h-6 text-[#008AC9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      path: '/radar',
-      disabled: true
-    }
-  ];
+const BackgroundGradient = () => (
+  <div className="absolute inset-0 -z-10 overflow-hidden bg-slate-50">
+    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-300/20 blur-[120px] animate-pulse" />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-300/20 blur-[120px] animate-pulse delay-1000" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px]" />
+  </div>
+);
+
+const MosquitoMotifs = () => {
+  const { scrollYProgress } = useScroll();
+  const gifUrl = "https://media.baamboozle.com/uploads/images/455457/1652936031_108805_gif-url.gif";
+
+  const yS1 = useTransform(scrollYProgress, [0, 1], ["-20vh", "150vh"]);
+  const xS1 = useTransform(scrollYProgress, [0, 1], ["-20vw", "120vw"]);
+
+  const yS2 = useTransform(scrollYProgress, [0, 1], ["120vh", "-50vh"]);
+  const xS2 = useTransform(scrollYProgress, [0, 1], ["100vw", "-20vw"]);
+
+  const yS3 = useTransform(scrollYProgress, [0, 1], ["20vh", "130vh"]);
+  const xS3 = useTransform(scrollYProgress, [0, 1], ["-30vw", "130vw"]);
+
+  const yS4 = useTransform(scrollYProgress, [0, 1], ["150vh", "10vh"]);
+  const xS4 = useTransform(scrollYProgress, [0, 1], ["-10vw", "110vw"]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <motion.img src={gifUrl} style={{ x: xS1, y: yS1 }} className="absolute w-80 md:w-96 opacity-90 mix-blend-multiply rotate-[15deg]" alt="m1" />
+      <motion.img src={gifUrl} style={{ x: xS1, y: yS1 }} className="absolute w-64 md:w-80 opacity-75 mix-blend-multiply rotate-[-5deg] translate-x-24 translate-y-20" alt="m2" />
+      <motion.img src={gifUrl} style={{ x: xS1, y: yS1 }} className="absolute w-72 md:w-96 opacity-85 mix-blend-multiply rotate-[30deg] -translate-x-20 -translate-y-24" alt="m3" />
+      <motion.img src={gifUrl} style={{ x: xS1, y: yS1 }} className="absolute w-56 md:w-72 opacity-65 mix-blend-multiply rotate-[10deg] translate-x-40 translate-y-8" alt="m4" />
+
+      <motion.img src={gifUrl} style={{ x: xS2, y: yS2 }} className="absolute w-96 md:w-[28rem] opacity-90 mix-blend-multiply -scale-x-100 rotate-[12deg]" alt="m5" />
+      <motion.img src={gifUrl} style={{ x: xS2, y: yS2 }} className="absolute w-80 md:w-96 opacity-80 mix-blend-multiply -scale-x-100 -rotate-[15deg] translate-x-32 translate-y-24" alt="m6" />
+      <motion.img src={gifUrl} style={{ x: xS2, y: yS2 }} className="absolute w-72 md:w-80 opacity-85 mix-blend-multiply -scale-x-100 rotate-[35deg] -translate-x-24 translate-y-10" alt="m7" />
+      <motion.img src={gifUrl} style={{ x: xS2, y: yS2 }} className="absolute w-64 md:w-72 opacity-70 mix-blend-multiply -scale-x-100 -rotate-[25deg] translate-x-16 -translate-y-32" alt="m8" />
+      <motion.img src={gifUrl} style={{ x: xS2, y: yS2 }} className="absolute w-56 md:w-64 opacity-60 mix-blend-multiply -scale-x-100 rotate-0 -translate-x-32 -translate-y-12" alt="m9" />
+
+      <motion.img src={gifUrl} style={{ x: xS3, y: yS3 }} className="absolute w-80 md:w-96 opacity-85 mix-blend-multiply rotate-[45deg]" alt="m10" />
+      <motion.img src={gifUrl} style={{ x: xS3, y: yS3 }} className="absolute w-64 md:w-80 opacity-70 mix-blend-multiply rotate-[70deg] translate-x-32 -translate-y-20" alt="m11" />
+      <motion.img src={gifUrl} style={{ x: xS3, y: yS3 }} className="absolute w-72 md:w-80 opacity-75 mix-blend-multiply rotate-[20deg] translate-x-16 translate-y-32" alt="m12" />
+      <motion.img src={gifUrl} style={{ x: xS3, y: yS3 }} className="absolute w-56 md:w-72 opacity-65 mix-blend-multiply rotate-[-10deg] -translate-x-24 -translate-y-16" alt="m13" />
+
+      <motion.img src={gifUrl} style={{ x: xS4, y: yS4 }} className="absolute w-96 md:w-[26rem] opacity-80 mix-blend-multiply -scale-x-100 rotate-[60deg]" alt="m14" />
+      <motion.img src={gifUrl} style={{ x: xS4, y: yS4 }} className="absolute w-80 md:w-96 opacity-75 mix-blend-multiply -scale-x-100 rotate-[30deg] translate-x-28 translate-y-12" alt="m15" />
+    </div>
+  );
+};
+
+export default function LandingPage() {
+  const navigate = useNavigate();
+  const targetRef = useRef(null);
+  
+  const { scrollYProgress } = useScroll({
+    target: targetRef,
+    offset: ["start start", "end start"],
+  });
+
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const y = useTransform(scrollYProgress, [0, 0.5], [0, 100]);
+
+  const scrollToFeatures = () => {
+    const element = document.getElementById("fitur-unggulan");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  return (
+    <div className="min-h-screen relative font-sans selection:bg-[#008AC9]/20 overflow-x-hidden flex flex-col text-slate-900">
+      <BackgroundGradient />
+      <MosquitoMotifs />
+
       <Navbar />
-      
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 md:px-8 bg-[#E3F2FD]/30 overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12">
-          <div className="flex-1 text-center lg:text-left">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
-              Lindungi Keluarga dari <span className="text-[#008AC9]">Demam Berdarah</span>
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              JentikMap adalah peta interaktif yang membantu warga Cilacap memantau sebaran jentik nyamuk secara real-time. Lapor cepat, cek radar rumahmu, dan cegah DBD bersama.
-            </p>
-            <button 
-              onClick={() => navigate('/map')}
-              className="bg-[#008AC9] hover:bg-[#0076ad] text-white px-8 py-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95"
+
+      <section
+        ref={targetRef}
+        className="relative pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto min-h-[90vh] flex items-center z-10"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center w-full">
+          <motion.div
+            style={{ opacity, y }}
+            className="relative z-10 text-center md:text-left order-2 md:order-1"
+          >
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-blue-100 backdrop-blur-md shadow-sm mb-6 hover:scale-105 transition-transform duration-300"
             >
-              Buka Peta Jentik
-            </button>
-          </div>
-          <div className="flex-1 relative">
-            <div className="absolute inset-0 bg-blue-100 blur-3xl opacity-20 transform scale-150"></div>
-            <img src={heroImg} alt="Mascot Illustration" className="relative w-full max-w-lg mx-auto transform hover:rotate-3 transition-transform duration-500" />
-          </div>
+              <Shield className="w-4 h-4 text-[#008AC9] fill-blue-100" />
+              <span className="text-sm font-semibold tracking-wide text-[#008AC9]">
+                Pencegahan DBD Kolaboratif
+              </span>
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6 text-slate-900"
+            >
+              Lindungi Keluarga <br className="hidden md:block" /> dari <br className="md:hidden"/>
+              <span className="relative inline-block mt-2">
+                <span className="relative z-10 bg-gradient-to-r from-[#008AC9] via-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                  Demam Berdarah
+                </span>
+                <motion.svg
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1, delay: 1 }}
+                  className="absolute w-full h-3 -bottom-2 left-0 text-blue-200"
+                  viewBox="0 0 100 10"
+                  preserveAspectRatio="none"
+                >
+                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="4" fill="none" />
+                </motion.svg>
+              </span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="text-lg md:text-xl text-slate-600 mb-8 max-w-xl mx-auto md:mx-0 leading-relaxed"
+            >
+              JentikMap adalah peta interaktif untuk memantau sebaran jentik nyamuk di Cilacap. Lapor cepat, cek radar rumahmu, dan cegah DBD bersama.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center"
+            >
+              <button
+                onClick={() => navigate('/map')}
+                className="w-full sm:w-auto h-14 px-8 text-lg rounded-full font-bold shadow-[0_8px_30px_rgb(0,138,201,0.3)] hover:shadow-[0_8px_30px_rgb(0,138,201,0.5)] hover:-translate-y-1 transition-all duration-300 bg-[#008AC9] hover:bg-[#0076ad] text-white flex items-center justify-center group relative overflow-hidden"
+              >
+                <span className="relative z-10 flex items-center">
+                  Buka Peta Jentik
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </button>
+
+              <button
+                onClick={scrollToFeatures}
+                className="w-full sm:w-auto h-14 px-8 text-lg font-bold rounded-full border-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-all duration-300 backdrop-blur-md"
+              >
+                Pelajari Fitur
+              </button>
+            </motion.div>
+          </motion.div>
+
+          <motion.div
+            style={{ opacity, y }}
+            className="relative z-10 order-1 md:order-2 flex justify-center items-center"
+          >
+            <div className="relative">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-[#008AC9]/20 to-cyan-300/20 rounded-full blur-[60px] -z-10" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8 }}
+                whileHover={{ scale: 1.05 }}
+              >
+                <img
+                  src={heroImg}
+                  alt="Ilustrasi Jentik Map"
+                  className="w-80 h-80 md:w-[32rem] md:h-[32rem] object-contain drop-shadow-2xl relative z-10"
+                />
+              </motion.div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="fitur" className="py-24 px-4 md:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">4 Fitur Unggulan</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              Dirancang untuk memudahkan warga, kader, dan pemerintah dalam memantau dan mencegah penyebaran DBD.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((item, idx) => (
-              <Link 
-                key={idx} 
-                to={item.disabled ? "#" : item.path}
-                className={cn(
-                  "p-8 rounded-3xl border border-gray-100 transition-all group block text-left relative overflow-hidden",
-                  item.disabled 
-                    ? "opacity-60 cursor-not-allowed bg-gray-50" 
-                    : "hover:border-blue-100 hover:shadow-2xl hover:shadow-blue-50 bg-white"
-                )}
-              >
-                {item.disabled && (
-                  <div className="absolute top-4 right-0 transform rotate-45 translate-x-1/2 -translate-y-1/2 bg-gray-200 text-gray-500 px-10 py-1 text-[10px] font-bold uppercase tracking-widest border-b border-gray-300">
-                    Segera
-                  </div>
-                )}
-                <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-transform",
-                  item.disabled ? "bg-gray-100 grayscale" : "bg-blue-50 group-hover:scale-110"
-                )}>
-                  {item.icon}
+      <section
+        id="fitur-unggulan"
+        className="px-6 md:px-12 py-20 max-w-7xl mx-auto space-y-24 md:space-y-32 relative z-10"
+      >
+        <div className="text-center mb-16 bg-white/40 backdrop-blur-sm py-8 rounded-[3rem]">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight text-slate-900"
+          >
+            Sistem Cerdas Pantau Lingkungan
+          </motion.h2>
+          <p className="text-slate-600 text-lg max-w-2xl mx-auto font-medium">
+            Dirancang untuk memudahkan warga, kader, dan pemerintah bersinergi mengendalikan persebaran nyamuk.
+          </p>
+        </div>
+
+        {features.map((feature, index) => (
+          <motion.div
+            key={feature.name}
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7 }}
+            className={`flex flex-col md:flex-row items-center gap-12 lg:gap-20 ${
+              index % 2 === 1 ? "md:flex-row-reverse" : ""
+            }`}
+          >
+            <div className="flex-1 space-y-6 text-center md:text-left relative bg-white/80 backdrop-blur-md p-8 rounded-[3rem] border border-white/80 shadow-xl shadow-blue-900/5">
+              {feature.disabled && (
+                <div className="inline-block px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                  Segera Hadir
                 </div>
-                <h3 className={cn("text-lg font-bold mb-3", item.disabled ? "text-gray-400" : "text-gray-900")}>{item.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
+              )}
+              
+              <div className="flex justify-center md:justify-start">
+                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-${feature.color}-100 text-${feature.color}-700 font-bold text-sm tracking-wide shadow-sm`}>
+                  {feature.name}
+                </div>
+              </div>
+
+              <h3 className={cn("text-3xl md:text-4xl font-extrabold leading-tight", feature.disabled ? "text-slate-400" : "text-slate-900")}>
+                {feature.tagline}
+              </h3>
+
+              <p className="text-lg text-slate-600 leading-relaxed font-medium">
+                {feature.description}
+              </p>
+
+              <ul className="space-y-3 pt-2">
+                {feature.checkpoints.map((point, i) => (
+                  <li
+                    key={i}
+                    className={cn("flex items-center gap-3 justify-center md:justify-start", feature.disabled ? "opacity-60" : "opacity-100")}
+                  >
+                    <CheckCircle2 className={cn("w-5 h-5", feature.disabled ? "text-slate-400" : `text-${feature.color}-500`)} />
+                    <span className="text-slate-700 font-bold">
+                      {point}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="pt-4">
+                <button
+                  disabled={feature.disabled}
+                  onClick={() => !feature.disabled && navigate(feature.href)}
+                  className={cn(
+                    "h-12 px-8 rounded-full font-bold transition-all duration-300 flex items-center justify-center mx-auto md:mx-0",
+                    feature.disabled 
+                      ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                      : "bg-[#008AC9] hover:bg-[#0076ad] text-white shadow-lg shadow-blue-500/30 hover:scale-105 hover:-translate-y-1"
+                  )}
+                >
+                  {feature.disabled ? "Dalam Pengembangan" : `Coba ${feature.name}`}
+                  {!feature.disabled && <ArrowRight className="ml-2 w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 relative w-full flex justify-center">
+              <motion.div
+                whileHover={feature.disabled ? {} : { scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+                className={cn(
+                  "relative z-10 w-full max-w-md aspect-square rounded-[2.5rem] bg-white p-4 shadow-2xl border border-white/80",
+                  feature.disabled ? "grayscale opacity-70" : "shadow-blue-900/10"
+                )}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent rounded-[2.5rem] -z-10"></div>
+                <img
+                  src={feature.gif}
+                  alt={`Animasi ${feature.name}`}
+                  className="w-full h-full object-cover rounded-3xl"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </motion.div>
+            </div>
+          </motion.div>
+        ))}
       </section>
 
-      {/* Roles Section */}
-      <section id="peran" className="py-24 px-4 md:px-8 bg-gray-50/50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Pilih Peranmu</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              Dirancang untuk memudahkan warga, kader, dan pemerintah dalam memantau dan mencegah penyebaran DBD.
-            </p>
-          </div>
-          <div className="flex flex-col md:flex-row justify-center gap-8 max-w-4xl mx-auto">
-            {/* Warga */}
-            <div className="flex-1 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col items-center">
-              <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
-                <img src={wargaIcon} alt="Warga" className="w-12 h-12 object-contain" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Warga</h3>
-              <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-                Pantau peta jentik, laporkan temuan, dan cek radar rumahmu. Fitur: Heatmap, Lapor Cepat, Smart Scanning, Radar Warga.
-              </p>
-              <button 
-                onClick={() => navigate('/auth')}
-                className="w-full py-3 bg-[#008AC9] hover:bg-[#0076ad] text-white rounded-xl font-bold transition-all shadow-md mt-auto"
-              >
-                Masuk
-              </button>
-            </div>
-            {/* Kader */}
-            <div className="flex-1 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col items-center">
-              <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
-                <img src={kaderIcon} alt="Kader" className="w-12 h-12 object-contain" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Kader Kesehatan</h3>
-              <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-                Kelola laporan wilayah, verifikasi data, pantau kinerja pelaporan, dan lapor temuan langsung dari lapangan.
-              </p>
-              <button 
-                onClick={() => navigate('/auth')}
-                className="w-full py-3 bg-[#008AC9] hover:bg-[#0076ad] text-white rounded-xl font-bold transition-all shadow-md mt-auto"
-              >
-                Masuk
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <section className="py-24 px-4 relative overflow-hidden z-10">
+        <div className="absolute inset-0 bg-[#008AC9]/5 -z-10" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="max-w-5xl mx-auto rounded-[3rem] bg-gradient-to-br from-[#008AC9] via-[#0076ad] to-cyan-600 p-1 shadow-2xl shadow-blue-900/20"
+        >
+          <div className="rounded-[calc(3rem-4px)] bg-slate-900/10 backdrop-blur-xl h-full p-10 md:p-20 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto bg-[#008AC9] rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-blue-200">
-          {/* Background mascot watermark */}
-          <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-x-1/4 translate-y-1/4">
-            <img src={heroImg} alt="maskot background" className="w-[600px] h-[600px] object-contain" />
-          </div>
-
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
-              Siap Cegah DBD di Lingkunganmu
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6 relative z-10 tracking-tight">
+              Siap Cegah DBD di <br className="hidden md:block"/> Lingkunganmu?
             </h2>
-            <p className="text-blue-50 mb-10 text-lg opacity-90">
+            <p className="text-blue-50 text-lg md:text-xl mb-10 max-w-2xl mx-auto relative z-10 font-medium">
               Bergabung dengan ribuan warga Cilacap yang sudah aktif memantau dan melaporkan jentik nyamuk.
             </p>
-            <button 
-              onClick={() => navigate('/auth')}
-              className="bg-white text-[#008AC9] hover:bg-blue-50 px-10 py-4 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2 mx-auto active:scale-95"
+
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative z-10 inline-block"
             >
-              Mulai Sekarang
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </button>
+              <button
+                onClick={() => navigate('/auth')}
+                className="h-16 px-10 text-xl font-bold rounded-full bg-white text-[#008AC9] hover:bg-slate-50 border-0 shadow-2xl flex items-center justify-center gap-3"
+              >
+                Mulai Sekarang
+                <ArrowRight className="w-6 h-6" />
+              </button>
+            </motion.div>
+
+            <Droplets className="absolute top-10 left-10 text-cyan-200 w-10 h-10 animate-pulse opacity-60 mix-blend-overlay" />
+            <MapPin className="absolute bottom-10 right-10 text-blue-200 w-12 h-12 animate-bounce duration-[3000ms] opacity-60 mix-blend-overlay" />
           </div>
-        </div>
+        </motion.div>
       </section>
 
       <Footer />
     </div>
   );
-};
-
-export default LandingPage;
+}
