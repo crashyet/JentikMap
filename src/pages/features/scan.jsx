@@ -1,40 +1,60 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scan, Cpu, Upload, ChevronLeft, ShieldCheck, Microscope, AlertTriangle, Sparkles, CheckCircle2, Bug } from 'lucide-react';
+import { Scan, Cpu, Upload, ChevronLeft, ShieldCheck, Microscope, AlertTriangle, CheckCircle2, Info, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../../components/layout/navbar';
 import { cn } from '@/lib/utils';
+import api from '../../services/api';
 
 const ScanPage = () => {
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
 
-  const startScan = () => {
-    if (scanning) return;
+  const startScan = async (fileToScan) => {
+    const file = fileToScan || selectedFile;
+    if (scanning || !file) return;
+    
     setScanning(true);
     setResult(null);
     
-    // Simulasi proses scanning AI
-    setTimeout(() => {
-      setScanning(false);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await api.postForm('/v1/user/scan', formData);
+      const responseData = response.data || {};
+
+      setResult({
+        status: responseData.is_rawan ? 'warning' : 'safe',
+        message: response.message || 'Analisis AI selesai dilakukan.',
+        alasan: responseData.alasan || 'Tidak ada detail alasan yang diberikan.',
+        saran: responseData.saran || 'Tidak ada saran khusus.',
+      });
+
+    } catch (error) {
       setResult({
         status: 'warning',
-        type: 'Aedes aegypti (Jentik)',
-        confidence: '98.4%',
-        message: 'Jentik terdeteksi! Segera bersihkan genangan air ini.',
+        message: 'Gagal terhubung ke server AI. Pastikan format gambar sesuai dan koneksi internet stabil.',
+        alasan: 'Sistem gagal menghubungi server analitik.',
+        saran: 'Silakan periksa koneksi internet Anda dan coba unggah ulang gambar beberapa saat lagi.',
       });
-    }, 3500);
+    } finally {
+      setScanning(false);
+    }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setPhotoPreview(URL.createObjectURL(file));
-      startScan();
+      setSelectedFile(file);
+      startScan(file);
     }
+    e.target.value = null; 
   };
 
   const triggerUpload = () => {
@@ -44,7 +64,6 @@ const ScanPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-[#008AC9]/20 relative overflow-hidden">
       
-      {/* Background Ornaments */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-gradient-to-bl from-blue-200/40 to-transparent rounded-full blur-[100px]"></div>
         <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-gradient-to-tr from-cyan-200/30 to-transparent rounded-full blur-[100px]"></div>
@@ -62,7 +81,6 @@ const ScanPage = () => {
       
       <main className="pt-28 pb-16 px-4 md:px-8 max-w-6xl mx-auto relative z-10">
         
-        {/* Header Section */}
         <div className="flex items-center gap-4 mb-10">
           <button 
             onClick={() => navigate('/')}
@@ -73,19 +91,16 @@ const ScanPage = () => {
           <div>
             <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
               Smart Scanning
-              <Sparkles className="w-6 h-6 text-amber-400 fill-amber-400" />
             </h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">Identifikasi jentik nyamuk seketika dengan kecerdasan buatan.</p>
+            <p className="text-sm font-medium text-slate-500 mt-1">Identifikasi kerawanan lingkungan seketika dengan AI.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* KIRI: Upload & Scan Area */}
           <div className="lg:col-span-7 space-y-6">
             <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-xl shadow-blue-900/5 border border-slate-100 relative overflow-hidden">
               
-              {/* Header Card Kiri */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                   <Scan className="w-5 h-5 text-[#008AC9]" /> Area Analisis
@@ -97,39 +112,32 @@ const ScanPage = () => {
                 )}
               </div>
 
-              {/* Box Gambar */}
               <div className="relative w-full aspect-square md:aspect-[4/3] bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 overflow-hidden group transition-all duration-300">
                 
-                {/* Kondisi 1: Belum ada foto */}
                 {!photoPreview && !scanning && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={triggerUpload}>
                     <div className="w-24 h-24 bg-white shadow-sm rounded-full flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-md transition-all duration-500">
                       <Microscope className="w-12 h-12 text-[#008AC9]" />
                     </div>
                     <p className="text-lg font-extrabold text-slate-700 mb-2">Unggah Foto Target</p>
-                    <p className="text-sm font-medium text-slate-400 max-w-xs">Ketuk di sini untuk memilih foto genangan air atau wadah dari galeri Anda.</p>
+                    <p className="text-sm font-medium text-slate-400 max-w-xs">Ketuk di sini untuk memilih foto genangan air atau lingkungan dari galeri Anda.</p>
                   </div>
                 )}
 
-                {/* Tampilan Foto */}
                 {photoPreview && (
                   <img src={photoPreview} alt="Target" className="w-full h-full object-cover transition-transform duration-700" />
                 )}
 
-                {/* Kondisi 2: Sedang Scanning (Overlay Laser & Efek) */}
                 {scanning && photoPreview && (
                   <div className="absolute inset-0 z-20 overflow-hidden">
-                    {/* Darker Overlay */}
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"></div>
                     
-                    {/* Laser Scanner Line Animation */}
                     <motion.div 
                       animate={{ y: ['0%', '100%', '0%'] }}
                       transition={{ duration: 3, ease: "linear", repeat: Infinity }}
                       className="absolute top-0 left-0 w-full h-1 bg-cyan-400 shadow-[0_0_20px_4px_rgba(34,211,238,0.8)] z-30"
                     />
 
-                    {/* AI Grid Targeting System */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="relative w-48 h-48">
                         <div className="absolute inset-0 border-2 border-cyan-400/30 rounded-3xl"></div>
@@ -146,7 +154,6 @@ const ScanPage = () => {
                   </div>
                 )}
 
-                {/* Kondisi 3: Selesai Scan tapi ingin ganti foto */}
                 {photoPreview && !scanning && (
                   <div 
                     onClick={triggerUpload}
@@ -158,10 +165,9 @@ const ScanPage = () => {
                 )}
               </div>
 
-              {/* Action Button Bawah Kiri */}
               <div className="mt-6">
                 <button 
-                  onClick={photoPreview && !scanning ? startScan : triggerUpload}
+                  onClick={() => photoPreview && !scanning ? startScan() : triggerUpload()}
                   disabled={scanning}
                   className={cn(
                     "w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all duration-300 shadow-xl",
@@ -184,7 +190,6 @@ const ScanPage = () => {
             </div>
           </div>
 
-          {/* KANAN: Results Area */}
           <div className="lg:col-span-5 h-full">
             <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-xl shadow-blue-900/5 border border-slate-100 h-full flex flex-col relative overflow-hidden">
               
@@ -195,7 +200,6 @@ const ScanPage = () => {
               <div className="flex-1 flex flex-col">
                 <AnimatePresence mode="wait">
                   
-                  {/* State 1: Kosong */}
                   {!result && !scanning && (
                     <motion.div 
                       key="empty"
@@ -210,7 +214,6 @@ const ScanPage = () => {
                     </motion.div>
                   )}
 
-                  {/* State 2: Loading Skeleton */}
                   {scanning && (
                      <motion.div 
                         key="loading"
@@ -218,7 +221,7 @@ const ScanPage = () => {
                         className="space-y-5 my-auto"
                       >
                         <div className="h-24 bg-slate-100 rounded-2xl animate-pulse"></div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4">
                           <div className="h-20 bg-slate-100 rounded-2xl animate-pulse"></div>
                           <div className="h-20 bg-slate-100 rounded-2xl animate-pulse"></div>
                         </div>
@@ -226,14 +229,13 @@ const ScanPage = () => {
                      </motion.div>
                   )}
 
-                  {/* State 3: Hasil Result */}
                   {result && !scanning && (
                     <motion.div 
                       key="result"
                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col h-full"
                     >
-                      {/* Banner Peringatan */}
+                      {/* Pesan Utama */}
                       <div className={cn(
                         "p-5 rounded-2xl flex items-start gap-4 mb-6 border",
                         result.status === 'warning' ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'
@@ -247,34 +249,33 @@ const ScanPage = () => {
                         </div>
                         <div>
                           <h4 className={cn("text-sm font-extrabold mb-1", result.status === 'warning' ? 'text-rose-900' : 'text-emerald-900')}>
-                            Deteksi Positif
+                            Status Analisis
                           </h4>
-                          <p className={cn("text-sm leading-relaxed", result.status === 'warning' ? 'text-rose-700' : 'text-emerald-700')}>
+                          <p className={cn("text-sm font-medium leading-relaxed", result.status === 'warning' ? 'text-rose-700' : 'text-emerald-700')}>
                             {result.message}
                           </p>
                         </div>
                       </div>
 
-                      {/* Detail Cards */}
-                      <div className="grid grid-cols-2 gap-4 mb-8">
+                      {/* Detail Cards: Alasan & Saran */}
+                      <div className="space-y-4 mb-8">
                         <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
                           <div className="flex items-center gap-2 mb-2">
-                            <Bug className="w-4 h-4 text-slate-400" />
-                            <p className="text-[10px] uppercase tracking-widest font-extrabold text-slate-500">Spesies</p>
+                            <Info className="w-4 h-4 text-slate-400" />
+                            <p className="text-[10px] uppercase tracking-widest font-extrabold text-slate-500">Alasan Analisis</p>
                           </div>
-                          <p className="text-sm font-bold text-slate-800">{result.type}</p>
+                          <p className="text-sm font-medium text-slate-800 leading-relaxed">{result.alasan}</p>
                         </div>
                         
                         <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
                            <div className="flex items-center gap-2 mb-2">
-                            <ShieldCheck className="w-4 h-4 text-[#008AC9]" />
-                            <p className="text-[10px] uppercase tracking-widest font-extrabold text-[#008AC9]">Tingkat Akurasi</p>
+                            <Lightbulb className="w-4 h-4 text-[#008AC9]" />
+                            <p className="text-[10px] uppercase tracking-widest font-extrabold text-[#008AC9]">Saran Tindakan</p>
                           </div>
-                          <p className="text-2xl font-black text-[#008AC9]">{result.confidence}</p>
+                          <p className="text-sm font-medium text-slate-800 leading-relaxed">{result.saran}</p>
                         </div>
                       </div>
 
-                      {/* Tombol Lapor */}
                       <div className="mt-auto pt-6 border-t border-slate-100">
                         <button 
                           onClick={() => navigate('/report')}
@@ -284,7 +285,7 @@ const ScanPage = () => {
                           <ChevronLeft className="w-5 h-5 rotate-180 group-hover:translate-x-1 transition-transform" />
                         </button>
                         <p className="text-center text-xs text-slate-400 mt-4 font-medium">
-                          Data ini akan dikirimkan ke petugas kesehatan terdekat.
+                          Berdasarkan hasil analisis, Anda dapat melanjutkannya menjadi laporan resmi ke petugas.
                         </p>
                       </div>
                     </motion.div>

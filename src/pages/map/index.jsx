@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import shieldImg from '../../assets/shield.png';
 import { Map, MapControls, MapMarker } from '@/components/ui/map';
 import { cn } from '@/lib/utils';
-import { Search, Crosshair, Plus, ShieldAlert } from 'lucide-react';
+import { Search, Crosshair, Plus, ShieldAlert, Loader2 } from 'lucide-react';
 
 const MapPage = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [mapTheme] = useState('voyager');
+  const [userLocation, setUserLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState([109.01, -7.71]);
+  const [isLocating, setIsLocating] = useState(false);
 
   const mapStyles = {
     voyager: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
@@ -34,35 +37,53 @@ const MapPage = () => {
     }
   };
 
+  const handleGetLocation = () => {
+    if (isLocating) return;
+    setIsLocating(true);
+    
+    setTimeout(() => {
+      const myLocation = [109.012, -7.712];
+      setUserLocation(myLocation);
+      setMapCenter(myLocation);
+      setIsLocating(false);
+    }, 1200);
+  };
+
   return (
     <div className="relative w-full h-screen bg-slate-50 overflow-hidden font-sans selection:bg-[#008AC9]/20">
 
-      {/* Interactive Map Component */}
       <Map
         key={mapTheme}
-        center={[109.01, -7.71]}
-        zoom={14}
+        center={mapCenter}
+        zoom={userLocation ? 15 : 13}
         style={mapStyles[mapTheme]}
         className="transition-all duration-500 ease-in-out"
       >
         <MapControls />
-        {markers.map((marker) => {
+        
+        {userLocation && (
+          <MapMarker lngLat={userLocation}>
+            <div className="relative flex items-center justify-center pointer-events-none">
+              <div className="absolute w-24 h-24 bg-[#008AC9]/20 rounded-full animate-ping"></div>
+              <div className="absolute w-12 h-12 bg-[#008AC9]/30 rounded-full"></div>
+              <div className="relative w-6 h-6 bg-[#008AC9] border-4 border-white rounded-full shadow-lg"></div>
+            </div>
+          </MapMarker>
+        )}
+
+        {userLocation && markers.map((marker) => {
           const colors = getStatusColor(marker.status);
           return (
             <MapMarker key={marker.id} lngLat={marker.lngLat}>
               <div className="relative group cursor-pointer">
-                {/* Pulsing ring */}
                 <div className={cn("absolute inset-0 w-12 h-12 -m-4 rounded-full animate-ping opacity-20", colors.ring)}></div>
-                {/* Glow effect */}
                 <div className={cn("absolute inset-0 w-16 h-16 -m-6 rounded-full blur-xl opacity-30", colors.core)}></div>
 
-                {/* Main marker dot */}
                 <div className={cn(
                   "relative w-6 h-6 rounded-full border-[3px] border-white shadow-md transition-transform duration-300 group-hover:scale-125",
                   colors.core
                 )}></div>
 
-                {/* Tooltip Label */}
                 <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-xl text-xs font-bold text-slate-700 whitespace-nowrap opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 border border-white/50 flex items-center gap-2">
                   <div className={cn("w-2 h-2 rounded-full", colors.core)}></div>
                   {marker.label}
@@ -73,11 +94,9 @@ const MapPage = () => {
         })}
       </Map>
 
-      {/* Top Floating Navigation Bar */}
       <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-[95%] max-w-3xl z-10">
         <div className="bg-white/80 backdrop-blur-2xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-2 md:p-3 flex items-center justify-between gap-3 border border-white/60">
 
-          {/* Logo & Back Button */}
           <div
             onClick={() => navigate('/')}
             className="flex items-center gap-3 pl-2 pr-4 cursor-pointer hover:bg-slate-100/50 rounded-full transition-colors py-1"
@@ -90,7 +109,6 @@ const MapPage = () => {
             </span>
           </div>
 
-          {/* Search Bar */}
           <div className="flex-1 max-w-sm relative group">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
               <Search className="w-4 h-4 text-slate-400 group-focus-within:text-[#008AC9] transition-colors" />
@@ -104,7 +122,6 @@ const MapPage = () => {
             />
           </div>
 
-          {/* Profile/Role Badge */}
           <div className="flex items-center gap-3 pr-2">
             <div className="hidden md:flex items-center gap-2 bg-slate-100/80 px-4 py-1.5 rounded-full border border-slate-200/50">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -121,8 +138,10 @@ const MapPage = () => {
         </div>
       </div>
 
-      {/* Legend Board (Bottom Left) */}
-      <div className="absolute bottom-8 left-6 z-10 hidden sm:block">
+      <div className={cn(
+        "absolute bottom-8 left-6 z-10 hidden sm:block transition-all duration-500",
+        userLocation ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+      )}>
         <div className="bg-white/80 backdrop-blur-2xl rounded-[2rem] shadow-xl p-5 border border-white/60 w-52">
           <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-4">Indikator Area</h4>
           <div className="space-y-3.5">
@@ -140,7 +159,6 @@ const MapPage = () => {
         </div>
       </div>
 
-      {/* Center Action Button (Lapor) */}
       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
         <button
           onClick={() => navigate('/report')}
@@ -150,7 +168,6 @@ const MapPage = () => {
           <div className="relative w-16 h-16 bg-gradient-to-tr from-[#008AC9] to-cyan-500 text-white rounded-full flex items-center justify-center shadow-[0_8px_25px_rgba(0,138,201,0.5)] transition-all duration-300 hover:scale-105 active:scale-95 border-4 border-white/20">
             <Plus className="w-8 h-8 transition-transform duration-300 group-hover:rotate-90" />
           </div>
-          {/* Lapor Tooltip */}
           <div className="absolute -top-12 bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none flex items-center gap-1 shadow-xl">
             Lapor Temuan
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
@@ -158,10 +175,19 @@ const MapPage = () => {
         </button>
       </div>
 
-      {/* Current Location Button (Bottom Right) */}
       <div className="absolute bottom-8 right-6 z-10 flex flex-col gap-4">
-        <button className="group w-12 h-12 bg-white/90 backdrop-blur-xl text-slate-600 hover:text-[#008AC9] rounded-2xl flex items-center justify-center shadow-[0_8px_20px_rgb(0,0,0,0.06)] border border-white transition-all duration-300 hover:bg-white hover:scale-105 active:scale-95">
-          <Crosshair className="w-5 h-5 transition-transform duration-500 group-hover:rotate-90 group-hover:scale-110" />
+        <button 
+          onClick={handleGetLocation}
+          className={cn(
+            "group w-12 h-12 bg-white/90 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-[0_8px_20px_rgb(0,0,0,0.06)] border border-white transition-all duration-300 hover:bg-white active:scale-95",
+            userLocation ? "text-[#008AC9]" : "text-slate-600 hover:text-[#008AC9]"
+          )}
+        >
+          {isLocating ? (
+            <Loader2 className="w-5 h-5 animate-spin text-[#008AC9]" />
+          ) : (
+            <Crosshair className="w-5 h-5 transition-transform duration-500 group-hover:rotate-90 group-hover:scale-110" />
+          )}
         </button>
       </div>
 

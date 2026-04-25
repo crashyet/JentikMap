@@ -32,15 +32,30 @@ const AuthPage = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       localStorage.setItem('user_token', 'demo_token_123');
-      localStorage.setItem('user_role', 'warga');        
       
-      if (!isLogin) {
-         localStorage.setItem('user_name', formData.namaLengkap);
-      } else {
-         localStorage.setItem('user_name', 'Budi Warga'); 
+      let role = 'warga';
+      let name = !isLogin ? formData.namaLengkap : 'Budi Warga';
+      let redirectPath = from;
+
+      if (formData.email === 'admin@jentik.com') {
+        role = 'admin';
+        name = 'Administrator';
+        redirectPath = '/admin';
+      } else if (formData.email === 'kader@jentik.com') {
+        role = 'kader';
+        name = 'Siti Kader';
+        redirectPath = '/kader';
+      }
+
+      localStorage.setItem('user_role', role);        
+      localStorage.setItem('user_name', name); 
+      
+      // Mencegah redirect kembali ke halaman auth
+      if (redirectPath === '/auth' || redirectPath === '/') {
+          redirectPath = role === 'admin' ? '/admin' : role === 'kader' ? '/kader' : '/map';
       }
       
-      navigate(from, { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       setError('Terjadi kesalahan koneksi. Silakan coba lagi.');
     } finally {

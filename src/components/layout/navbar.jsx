@@ -101,7 +101,7 @@ const Navbar = () => {
                 {/* Tombol Khusus Kader/Admin */}
                 {(userRole === 'kader' || userRole === 'admin') && (
                   <button 
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate(userRole === 'admin' ? '/admin' : '/kader')}
                     className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-slate-600 bg-slate-50 hover:bg-blue-50 hover:text-[#008AC9] border border-slate-200 transition-colors"
                     title="Dashboard"
                   >
@@ -214,11 +214,11 @@ const Navbar = () => {
 
                 {(userRole === 'kader' || userRole === 'admin') && (
                    <Link
-                      to="/dashboard"
+                      to={userRole === 'admin' ? '/admin' : '/kader'}
                       onClick={() => setIsOpen(false)}
                       className={cn(
                         "flex items-center gap-3 px-4 py-3 rounded-2xl text-base font-bold transition-colors",
-                        location.pathname === '/dashboard' ? "bg-blue-50 text-[#008AC9]" : "text-slate-600 hover:bg-slate-50"
+                        (location.pathname === '/kader' || location.pathname === '/admin') ? "bg-blue-50 text-[#008AC9]" : "text-slate-600 hover:bg-slate-50"
                       )}
                     >
                       <LayoutDashboard className="w-5 h-5" /> Dashboard

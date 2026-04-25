@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://gdgoc.skyibe.my.id/api';
 
 const api = {
   async get(endpoint) {
@@ -14,6 +14,19 @@ const api = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.json();
+  },
+
+  async postForm(endpoint, formData) {
+    const token = localStorage.getItem('user_token');
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: formData,
     });
     if (!response.ok) throw new Error('Network response was not ok');
     return response.json();
