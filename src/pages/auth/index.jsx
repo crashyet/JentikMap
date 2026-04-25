@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ShieldAlert, ChevronLeft, Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
 import heroImg from '../../assets/hero.png';
+import AuthService from '../../services/authService';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -29,35 +30,69 @@ const AuthPage = () => {
     setError('');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      localStorage.setItem('user_token', 'demo_token_123');
-      
       let role = 'warga';
       let name = !isLogin ? formData.namaLengkap : 'Budi Warga';
       let redirectPath = from;
+      let token = null;
+      let serverUser = null;
 
-      if (formData.email === 'admin@jentik.com') {
-        role = 'admin';
-        name = 'Administrator';
-        redirectPath = '/admin';
-      } else if (formData.email === 'kader@jentik.com') {
-        role = 'kader';
-        name = 'Siti Kader';
-        redirectPath = '/kader';
+      if (isLogin) {
+        const response = await AuthService.login({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        token = response?.token || response?.data?.token || response?.access_token || response?.data?.access_token;
+        serverUser = response?.user || response?.data?.user;
+
+        if (!token) {
+          throw new Error('Token tidak diterima dari server.');
+        }
+      } else {
+        const response = await AuthService.register({
+          namaLengkap: formData.namaLengkap,
+          email: formData.email,
+          password: formData.password,
+        });
+
+        token = response?.token || response?.data?.token || response?.access_token || response?.data?.access_token;
+        serverUser = response?.user || response?.data?.user;
+
+        if (!token) {
+          token = 'demo_token_123';
+        }
       }
 
-      localStorage.setItem('user_role', role);        
-      localStorage.setItem('user_name', name); 
-      
-      // Mencegah redirect kembali ke halaman auth
+      AuthService.saveToken(token);
+
+      if (serverUser) {
+        role = serverUser?.role || role;
+        name = serverUser?.name || name;
+      } else {
+        if (formData.email === 'admin@jentik.com') {
+          role = 'admin';
+          name = 'Administrator';
+          redirectPath = '/admin';
+        } else if (formData.email === 'kader@jentik.com') {
+          role = 'kader';
+          name = 'Siti Kader';
+          redirectPath = '/kader';
+        }
+      }
+
+      localStorage.setItem('user_role', role);
+      localStorage.setItem('user_name', name);
+      if (serverUser) {
+        localStorage.setItem('user', JSON.stringify(serverUser));
+      }
+
       if (redirectPath === '/auth' || redirectPath === '/') {
-          redirectPath = role === 'admin' ? '/admin' : role === 'kader' ? '/kader' : '/map';
+        redirectPath = role === 'admin' ? '/admin' : role === 'kader' ? '/kader' : '/map';
       }
-      
+
       navigate(redirectPath, { replace: true });
     } catch (err) {
-      setError('Terjadi kesalahan koneksi. Silakan coba lagi.');
+      setError(err?.message || 'Terjadi kesalahan koneksi. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }

@@ -36,9 +36,10 @@ const ScanPage = () => {
       });
 
     } catch (error) {
+      console.error('Scan failed:', error);
       setResult({
         status: 'warning',
-        message: 'Gagal terhubung ke server AI. Pastikan format gambar sesuai dan koneksi internet stabil.',
+        message: error?.message ? `Gagal memindai: ${error.message}` : 'Gagal terhubung ke server AI. Pastikan format gambar sesuai dan koneksi internet stabil.',
         alasan: 'Sistem gagal menghubungi server analitik.',
         saran: 'Silakan periksa koneksi internet Anda dan coba unggah ulang gambar beberapa saat lagi.',
       });

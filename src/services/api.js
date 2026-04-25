@@ -1,8 +1,18 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://gdgoc.skyibe.my.id/api';
+const TOKEN_KEY = 'user_token';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const api = {
   async get(endpoint) {
-    const response = await fetch(`${BASE_URL}${endpoint}`);
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!response.ok) throw new Error('Network response was not ok');
     return response.json();
   },
@@ -12,6 +22,7 @@ const api = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -20,11 +31,10 @@ const api = {
   },
 
   async postForm(endpoint, formData) {
-    const token = localStorage.getItem('user_token');
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...getAuthHeaders(),
       },
       body: formData,
     });
