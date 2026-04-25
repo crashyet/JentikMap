@@ -13,7 +13,10 @@ const api = {
         ...getAuthHeaders(),
       },
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
+    }
     return response.json();
   },
 
@@ -26,7 +29,10 @@ const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
+    }
     return response.json();
   },
 
@@ -44,7 +50,7 @@ const api = {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status} Unauthorized${errorText ? `: ${errorText}` : ''}`);
+      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
     }
     return response.json();
   },

@@ -36,17 +36,26 @@ const AuthPage = () => {
       let token = null;
       let serverUser = null;
 
+      const extractToken = (response) => {
+        return response?.token
+          || response?.access_token
+          || response?.data?.token
+          || response?.data?.access_token
+          || response?.data?.data?.token
+          || response?.data?.data?.access_token;
+      };
+
       if (isLogin) {
         const response = await AuthService.login({
           email: formData.email,
           password: formData.password,
         });
 
-        token = response?.token || response?.data?.token || response?.access_token || response?.data?.access_token;
-        serverUser = response?.user || response?.data?.user;
+        token = extractToken(response);
+        serverUser = response?.user || response?.data?.user || response?.data?.data?.user;
 
         if (!token) {
-          throw new Error('Token tidak diterima dari server.');
+          throw new Error('Token tidak diterima dari server. Periksa endpoint login atau kredensial Anda.');
         }
       } else {
         const response = await AuthService.register({
@@ -55,11 +64,11 @@ const AuthPage = () => {
           password: formData.password,
         });
 
-        token = response?.token || response?.data?.token || response?.access_token || response?.data?.access_token;
-        serverUser = response?.user || response?.data?.user;
+        token = extractToken(response);
+        serverUser = response?.user || response?.data?.user || response?.data?.data?.user;
 
         if (!token) {
-          token = 'demo_token_123';
+          throw new Error('Token tidak diterima dari server saat registrasi. Silakan periksa konfigurasi backend.');
         }
       }
 
