@@ -31,14 +31,21 @@ const api = {
   },
 
   async postForm(endpoint, formData) {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) {
+      throw new Error('Token otentikasi tidak ditemukan. Silakan masuk terlebih dahulu.');
+    }
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        ...getAuthHeaders(),
-      },
+      headers,
       body: formData,
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status} Unauthorized${errorText ? `: ${errorText}` : ''}`);
+    }
     return response.json();
   },
 };

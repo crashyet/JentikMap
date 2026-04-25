@@ -13,10 +13,22 @@ const ScanPage = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
+  const MotionDiv = motion.div;
 
   const startScan = async (fileToScan) => {
     const file = fileToScan || selectedFile;
     if (scanning || !file) return;
+
+    const token = localStorage.getItem('user_token');
+    if (!token) {
+      setResult({
+        status: 'warning',
+        message: 'Silakan masuk terlebih dahulu untuk menggunakan fitur scan.',
+        alasan: 'Token otentikasi tidak ditemukan.',
+        saran: 'Masuk melalui halaman Auth, kemudian ulangi scan.',
+      });
+      return;
+    }
     
     setScanning(true);
     setResult(null);
@@ -133,7 +145,7 @@ const ScanPage = () => {
                   <div className="absolute inset-0 z-20 overflow-hidden">
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"></div>
                     
-                    <motion.div 
+                    <MotionDiv 
                       animate={{ y: ['0%', '100%', '0%'] }}
                       transition={{ duration: 3, ease: "linear", repeat: Infinity }}
                       className="absolute top-0 left-0 w-full h-1 bg-cyan-400 shadow-[0_0_20px_4px_rgba(34,211,238,0.8)] z-30"
@@ -202,7 +214,7 @@ const ScanPage = () => {
                 <AnimatePresence mode="wait">
                   
                   {!result && !scanning && (
-                    <motion.div 
+                    <MotionDiv 
                       key="empty"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                       className="flex-1 flex flex-col items-center justify-center text-center opacity-50 my-auto py-10"
@@ -212,11 +224,11 @@ const ScanPage = () => {
                       </div>
                       <p className="text-sm font-bold text-slate-600">Menunggu Gambar</p>
                       <p className="text-xs text-slate-400 mt-1 max-w-[200px]">Hasil analisis AI akan muncul di panel ini.</p>
-                    </motion.div>
+                    </MotionDiv>
                   )}
 
                   {scanning && (
-                     <motion.div 
+                     <MotionDiv 
                         key="loading"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="space-y-5 my-auto"
@@ -227,11 +239,11 @@ const ScanPage = () => {
                           <div className="h-20 bg-slate-100 rounded-2xl animate-pulse"></div>
                         </div>
                         <div className="h-12 w-2/3 bg-slate-100 rounded-xl animate-pulse mt-8 mx-auto"></div>
-                     </motion.div>
+                     </MotionDiv>
                   )}
 
                   {result && !scanning && (
-                    <motion.div 
+                    <MotionDiv 
                       key="result"
                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col h-full"
@@ -289,7 +301,7 @@ const ScanPage = () => {
                           Berdasarkan hasil analisis, Anda dapat melanjutkannya menjadi laporan resmi ke petugas.
                         </p>
                       </div>
-                    </motion.div>
+                    </MotionDiv>
                   )}
                 </AnimatePresence>
               </div>

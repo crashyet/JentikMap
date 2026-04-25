@@ -47,7 +47,9 @@ function App() {
         <Route 
           path="/scan" 
           element={
+            <ProtectedRoute allowedRoles={['warga', 'kader', 'admin']}>
               <ScanPage />
+            </ProtectedRoute>
           } 
         />
         <Route 
