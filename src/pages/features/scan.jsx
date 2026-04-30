@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scan, Cpu, Upload, ChevronLeft, ShieldCheck, Microscope, AlertTriangle, CheckCircle2, Info, Lightbulb } from 'lucide-react';
+import { Scan, Cpu, Upload, ChevronLeft, ShieldCheck, Microscope, AlertTriangle, CheckCircle2, Info, Lightbulb, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../../components/layout/navbar';
 import { cn } from '@/lib/utils';
@@ -12,8 +12,28 @@ const ScanPage = () => {
   const [result, setResult] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [locationStatus, setLocationStatus] = useState(''); // State untuk info UI saat cari lokasi
   const fileInputRef = useRef(null);
   const MotionDiv = motion.div;
+
+  // Fungsi untuk mendapatkan kordinat lokasi (GPS) pengguna
+  const getUserLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Browser atau perangkat Anda tidak mendukung fitur lokasi (GPS).'));
+      } else {
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve(position.coords),
+          (error) => {
+            let errorMsg = 'Gagal mendapatkan lokasi.';
+            if (error.code === 1) errorMsg = 'Izin akses lokasi ditolak. Izinkan aplikasi membaca lokasi Anda untuk melapor.';
+            reject(new Error(errorMsg));
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+    });
+  };
 
   const startScan = async (fileToScan) => {
     const file = fileToScan || selectedFile;
@@ -32,14 +52,24 @@ const ScanPage = () => {
     
     setScanning(true);
     setResult(null);
+    setLocationStatus('Mengambil titik koordinat lokasi...');
     
     try {
+      // 1. Dapatkan lokasi (Latitude & Longitude) WAJIB!
+      const coords = await getUserLocation();
+      setLocationStatus('Lokasi ditemukan. Menganalisis gambar dengan AI...');
+
+      // 2. Siapkan form data sesuai dokumentasi API
       const formData = new FormData();
       formData.append('image', file);
+      formData.append('lat', coords.latitude.toString());
+      formData.append('lng', coords.longitude.toString());
 
-      const response = await api.postForm('/v1/user/scan', formData);
+      // 3. Kirim ke endpoint /v1/scan (sesuai dokumentasi)
+      const response = await api.postForm('/v1/scan', formData);
       const responseData = response.data || {};
 
+      // 4. Tampilkan hasil
       setResult({
         status: responseData.is_rawan ? 'warning' : 'safe',
         message: response.message || 'Analisis AI selesai dilakukan.',
@@ -51,12 +81,13 @@ const ScanPage = () => {
       console.error('Scan failed:', error);
       setResult({
         status: 'warning',
-        message: error?.message ? `Gagal memindai: ${error.message}` : 'Gagal terhubung ke server AI. Pastikan format gambar sesuai dan koneksi internet stabil.',
-        alasan: 'Sistem gagal menghubungi server analitik.',
-        saran: 'Silakan periksa koneksi internet Anda dan coba unggah ulang gambar beberapa saat lagi.',
+        message: error?.message || 'Gagal memproses pindaian.',
+        alasan: 'Terjadi masalah pada koneksi, lokasi, atau server.',
+        saran: 'Pastikan GPS Anda aktif, izin lokasi diberikan, dan internet Anda stabil. Kemudian coba lagi.',
       });
     } finally {
       setScanning(false);
+      setLocationStatus('');
     }
   };
 
@@ -159,8 +190,12 @@ const ScanPage = () => {
                         <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl"></div>
                         <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-cyan-400 rounded-br-xl"></div>
                         
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Cpu className="w-12 h-12 text-cyan-400 animate-pulse drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          {locationStatus.includes('titik koordinat') ? (
+                            <MapPin className="w-12 h-12 text-cyan-400 animate-bounce drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                          ) : (
+                            <Cpu className="w-12 h-12 text-cyan-400 animate-pulse drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -177,6 +212,13 @@ const ScanPage = () => {
                   </div>
                 )}
               </div>
+              
+              {/* Status Loading Text untuk memberi tahu User sedang apa */}
+              {scanning && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm font-bold text-[#008AC9] animate-pulse">{locationStatus}</p>
+                </div>
+              )}
 
               <div className="mt-6">
                 <button 
@@ -192,7 +234,7 @@ const ScanPage = () => {
                   )}
                 >
                   {scanning ? (
-                    <>Menganalisis Pola Visual...</>
+                    <>Sedang Memproses...</>
                   ) : photoPreview ? (
                     <><Scan className="w-5 h-5" /> Pindai Ulang Gambar</>
                   ) : (
