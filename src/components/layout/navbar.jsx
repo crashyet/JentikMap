@@ -16,8 +16,8 @@ const Navbar = () => {
   // Effect untuk memantau status login setiap kali route berubah
   useEffect(() => {
     const token = localStorage.getItem('user_token');
-    const role = localStorage.getItem('user_role') || 'warga'; // Default fallback
-    const name = localStorage.getItem('user_name') || 'Warga';
+    const role = localStorage.getItem('user_role') || 'user'; // UBAH: Default fallback jadi 'user'
+    const name = localStorage.getItem('user_name') || 'Pengguna';
 
     setIsAuthenticated(!!token);
     setUserRole(role);
@@ -87,8 +87,8 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                {/* Tombol Khusus Warga */}
-                {userRole === 'warga' && (
+                {/* Tombol Khusus Warga/User */}
+                {userRole === 'user' && ( // UBAH: Cek role 'user' bukan 'warga'
                    <button 
                      onClick={() => navigate('/warga/history')}
                      className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-slate-600 bg-slate-50 hover:bg-blue-50 hover:text-[#008AC9] border border-slate-200 transition-colors"
@@ -199,7 +199,7 @@ const Navbar = () => {
                 <div className="h-px bg-slate-100 my-2"></div>
 
                 {/* Mobile Extra Links */}
-                {userRole === 'warga' && (
+                {userRole === 'user' && ( // UBAH: Cek role 'user'
                    <Link
                       to="/warga/history"
                       onClick={() => setIsOpen(false)}
