@@ -5,7 +5,7 @@ import MapPage from './pages/map'
 import ReportPage from './pages/features/report'
 import ScanPage from './pages/features/scan'
 import RadarPage from './pages/features/radar'
-import HistoryPage from './pages/warga/HistoryPage' // <--- Import baru
+import HistoryPage from './pages/warga/HistoryPage'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 
 import KaderLayout from './pages/kader/layout'
@@ -39,7 +39,8 @@ function App() {
         <Route 
           path="/report" 
           element={
-            <ProtectedRoute allowedRoles={['warga', 'kader']}>
+            // UBAH 'warga' menjadi 'user'
+            <ProtectedRoute allowedRoles={['user', 'kader']}>
               <ReportPage />
             </ProtectedRoute>
           } 
@@ -47,7 +48,8 @@ function App() {
         <Route 
           path="/scan" 
           element={
-            <ProtectedRoute allowedRoles={['warga', 'kader', 'admin']}>
+            // UBAH 'warga' menjadi 'user'
+            <ProtectedRoute allowedRoles={['user', 'kader', 'admin']}>
               <ScanPage />
             </ProtectedRoute>
           } 
@@ -55,7 +57,7 @@ function App() {
         <Route 
           path="/radar" 
           element={
-            // <ProtectedRoute allowedRoles={['warga']}>
+            // <ProtectedRoute allowedRoles={['user']}>
               <RadarPage />
             // </ProtectedRoute>
           } 
@@ -81,11 +83,13 @@ function App() {
         <Route 
           path="/warga/history" 
           element={
-            <ProtectedRoute allowedRoles={['warga']}>
+            // UBAH 'warga' menjadi 'user'
+            <ProtectedRoute allowedRoles={['user']}>
               <HistoryPage />
             </ProtectedRoute>
           } 
         /> 
+        
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
