@@ -13,6 +13,7 @@ const AuthPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState(''); // State baru untuk pesan sukses
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,84 +29,48 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccessMsg('');
 
     try {
-      let role = 'warga';
-      let name = !isLogin ? formData.namaLengkap : 'Budi Warga';
-      let redirectPath = from;
-      let token = null;
-      let serverUser = null;
-
-      const extractToken = (response) => {
-        return response?.token
-          || response?.access_token
-          || response?.data?.token
-          || response?.data?.access_token
-          || response?.data?.data?.token
-          || response?.data?.data?.access_token;
-      };
-
       if (isLogin) {
+        // --- PROSES LOGIN ---
         const response = await AuthService.login({
           email: formData.email,
           password: formData.password,
         });
 
-        token = extractToken(response);
-        serverUser = response?.user || response?.data?.user || response?.data?.data?.user;
+        // AuthService otomatis menyimpan token & role. Kita ambil rolenya untuk navigasi.
+        const role = response.role || localStorage.getItem('user_role') || 'user';
+        let redirectPath = from;
 
-        if (!token) {
-          throw new Error('Token tidak diterima dari server. Periksa endpoint login atau kredensial Anda.');
+        if (!redirectPath || redirectPath === '/auth' || redirectPath === '/') {
+          // Arahkan berdasarkan role ("user" adalah default warga di API)
+          redirectPath = role === 'admin' ? '/admin' : role === 'kader' ? '/dashboard' : '/map';
         }
+
+        navigate(redirectPath, { replace: true });
+
       } else {
-        const response = await AuthService.register({
+        // --- PROSES REGISTER ---
+        await AuthService.register({
           namaLengkap: formData.namaLengkap,
           email: formData.email,
           password: formData.password,
         });
 
-        token = extractToken(response);
-        serverUser = response?.user || response?.data?.user || response?.data?.data?.user;
-
-        if (!token) {
-          throw new Error('Token tidak diterima dari server saat registrasi. Silakan periksa konfigurasi backend.');
-        }
+        // Jika berhasil (tidak masuk catch), tampilkan pesan sukses
+        setSuccessMsg('Registrasi berhasil! Silakan masuk menggunakan akun Anda.');
+        setIsLogin(true); // Otomatis pindah ke tab Login
+        setFormData((prev) => ({ ...prev, password: '' })); // Kosongkan password demi keamanan
       }
-
-      AuthService.saveToken(token);
-
-      if (serverUser) {
-        role = serverUser?.role || role;
-        name = serverUser?.name || name;
-      } else {
-        if (formData.email === 'admin@jentik.com') {
-          role = 'admin';
-          name = 'Administrator';
-          redirectPath = '/admin';
-        } else if (formData.email === 'kader@jentik.com') {
-          role = 'kader';
-          name = 'Siti Kader';
-          redirectPath = '/kader';
-        }
-      }
-
-      localStorage.setItem('user_role', role);
-      localStorage.setItem('user_name', name);
-      if (serverUser) {
-        localStorage.setItem('user', JSON.stringify(serverUser));
-      }
-
-      if (redirectPath === '/auth' || redirectPath === '/') {
-        redirectPath = role === 'admin' ? '/admin' : role === 'kader' ? '/kader' : '/map';
-      }
-
-      navigate(redirectPath, { replace: true });
     } catch (err) {
+      // Tangkap error dari backend (misal: "Email atau password salah" atau "Email sudah terdaftar")
       setError(err?.message || 'Terjadi kesalahan koneksi. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex min-h-screen bg-white font-sans selection:bg-[#008AC9]/20">
@@ -171,22 +136,30 @@ const AuthPage = () => {
 
           <div className="bg-slate-100 p-1.5 rounded-2xl flex mb-8">
             <button
-              onClick={() => { setIsLogin(true); setError(''); }}
+              onClick={() => { setIsLogin(true); setError(''); setSuccessMsg(''); }}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${isLogin ? 'bg-white text-[#008AC9] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Masuk
             </button>
             <button
-              onClick={() => { setIsLogin(false); setError(''); }}
+              onClick={() => { setIsLogin(false); setError(''); setSuccessMsg(''); }}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${!isLogin ? 'bg-white text-[#008AC9] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Daftar
             </button>
           </div>
 
+          {/* Pesan Error (Merah) */}
           {error && (
             <div className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 text-sm rounded-2xl text-center font-bold flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
               <ShieldAlert className="w-4 h-4" /> {error}
+            </div>
+          )}
+
+          {/* Pesan Sukses (Hijau) - Muncul setelah register berhasil */}
+          {successMsg && (
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-600 text-sm rounded-2xl text-center font-bold flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
+              <CheckCircle2 className="w-4 h-4" /> {successMsg}
             </div>
           )}
 
@@ -264,7 +237,7 @@ const AuthPage = () => {
                 </>
               )}
             </button>
-          </form> {/* <--- UBAH DI SINI: Dari </case> menjadi </form> */}
+          </form>
         </div>
       </div>
     </div>

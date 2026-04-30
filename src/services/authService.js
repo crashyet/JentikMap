@@ -1,53 +1,49 @@
 import api from './api';
 
 const TOKEN_KEY = 'user_token';
-const USER_KEY = 'user';
-const LOGIN_PATHS = [
-  '/auth/login',
-  '/v1/auth/login',
-  '/v1/user/login',
-  '/auth/local',
-  '/v1/auth/local',
-  '/user/auth',
-  '/v1/user/auth',
-  '/login',
-  '/v1/login',
-  '/user/login',
-];
-const REGISTER_PATHS = [
-  '/auth/register',
-  '/v1/auth/register',
-  '/v1/user/register',
-  '/register',
-  '/v1/register',
-  '/user/register',
-  '/auth/local/register',
-  '/v1/auth/local/register',
-];
-
-const tryPostPaths = async (paths, payload) => {
-  let lastError = null;
-  for (const path of paths) {
-    try {
-      return await api.post(path, payload);
-    } catch (error) {
-      lastError = error;
-      if (!error.message.includes('404')) {
-        // If error is not file-not-found, stop and propagate it.
-        throw error;
-      }
-    }
-  }
-  throw lastError;
-};
+const ROLE_KEY = 'user_role';
+const NAME_KEY = 'user_name'; 
 
 const AuthService = {
+  // ── LOGIN ──────────────────────────────────────────────────
   login: async (credentials) => {
-    return tryPostPaths(LOGIN_PATHS, credentials);
+    const { email, password } = credentials;
+
+    // Memanggil API login sesuai dokumentasi (POST /api/v1/auth/login)
+    const response = await api.post('/v1/auth/login', { 
+      email, 
+      password 
+    });
+
+    // Sesuai dokumentasi, response sukses berisi: message, token, role
+    if (response && response.token) {
+      localStorage.setItem(TOKEN_KEY, response.token);
+      localStorage.setItem(ROLE_KEY, response.role || 'user'); 
+      
+      // Catatan: Jika API backend tidak mengirimkan nama saat login, 
+      // Anda bisa membiarkannya kosong atau mengatur default.
+      // Jika backend mengirimkan nama, gunakan: response.nama (sesuaikan jika ada)
+    }
+
+    return response;
   },
 
+  // ── REGISTER ───────────────────────────────────────────────
   register: async (userData) => {
-    return tryPostPaths(REGISTER_PATHS, userData);
+    // Memetakan data dari form frontend ke format yang diminta API
+    const payload = {
+      nama: userData.namaLengkap, // Frontend mengirim namaLengkap, API meminta 'nama'
+      email: userData.email,
+      password: userData.password,
+      // role tidak wajib dikirim, default API adalah "user"
+    };
+
+    // Memanggil API register sesuai dokumentasi (POST /api/v1/auth/register)
+    const response = await api.post('/v1/auth/register', payload);
+
+    // Register mengembalikan: message dan data (id, nama, role). Tidak ada token.
+    // UI di AuthPage.jsx harus menangani redirect ke mode Login setelah sukses.
+    return response;
   },
 
   saveToken: (token) => {
@@ -59,15 +55,23 @@ const AuthService = {
   },
 
   logout: () => {
+    // Bersihkan semua data sesi pengguna saat logout
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_name');
+    localStorage.removeItem(ROLE_KEY);
+    localStorage.removeItem(NAME_KEY);
+    localStorage.removeItem('user'); // berjaga-jaga jika masih ada sisa kode lama
   },
 
   getCurrentUser: () => {
-    const user = localStorage.getItem(USER_KEY);
-    return user ? JSON.parse(user) : null;
+    const token = localStorage.getItem(TOKEN_KEY);
+    
+    if (!token) return null;
+
+    return {
+      token: token,
+      role: localStorage.getItem(ROLE_KEY),
+      name: localStorage.getItem(NAME_KEY),
+    };
   },
 };
 
