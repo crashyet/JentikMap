@@ -62,7 +62,7 @@ const features = [
       "Notifikasi peringatan bahaya",
       "Sistem deteksi lingkungan mandiri",
     ],
-    disabled: true
+    disabled: false
   },
 ];
 

@@ -30,6 +30,7 @@ const AdminLayout = () => {
     { path: '/admin/kader', icon: <UserSquare2 size={20} />, label: 'Manajemen Kader' },
     { path: '/admin/warga', icon: <Users size={20} />, label: 'Manajemen Warga' },
     { path: '/admin/wilayah', icon: <MapPin size={20} />, label: 'Data Wilayah' },
+    { path: '/admin/darurat', icon: <MapPin size={20} />, label: 'Darurat (Tindakan)' },
     { path: '/admin/statistik', icon: <BarChart3 size={20} />, label: 'Statistik Global' },
     { path: '/admin/pengaturan', icon: <Settings size={20} />, label: 'Pengaturan' },
   ];

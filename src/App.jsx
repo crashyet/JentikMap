@@ -21,6 +21,9 @@ import AdminWarga from './pages/admin/warga'
 import AdminWilayah from './pages/admin/wilayah'
 import AdminStatistik from './pages/admin/statistik'
 import AdminPengaturan from './pages/admin/pengaturan'
+import AdminDarurat from './pages/admin/darurat'
+
+import KaderDarurat from './pages/kader/darurat'
 
 function App() {
   return (
@@ -69,6 +72,7 @@ function App() {
           <Route path="validasi" element={<KaderValidasi />} />
           <Route path="peta" element={<KaderPeta />} />
           <Route path="pengaturan" element={<KaderPengaturan />} />
+          <Route path="darurat" element={<KaderDarurat />} />
         </Route>
 
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
@@ -78,6 +82,7 @@ function App() {
           <Route path="wilayah" element={<AdminWilayah />} />
           <Route path="statistik" element={<AdminStatistik />} />
           <Route path="pengaturan" element={<AdminPengaturan />} />
+          <Route path="darurat" element={<AdminDarurat />} />
         </Route>
 
         <Route 

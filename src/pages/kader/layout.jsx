@@ -27,6 +27,7 @@ const KaderLayout = () => {
     { path: '/kader', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { path: '/kader/validasi', icon: <ClipboardCheck size={20} />, label: 'Validasi Laporan' },
     { path: '/kader/peta', icon: <Map size={20} />, label: 'Peta Area' },
+    { path: '/kader/darurat', icon: <ClipboardCheck size={20} />, label: 'Laporan Darurat' },
     { path: '/kader/pengaturan', icon: <Settings size={20} />, label: 'Pengaturan' },
   ];
 
