@@ -36,6 +36,23 @@ const api = {
     return response.json();
   },
 
+  // DITAMBAHKAN: Fungsi PUT untuk update lokasi sesuai dokumentasi
+  async put(endpoint, data) {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
+    }
+    return response.json();
+  },
+
   async postForm(endpoint, formData) {
     const headers = getAuthHeaders();
     if (!headers.Authorization) {

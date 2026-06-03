@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import shieldImg from '../../assets/shield.png';
 import { Map, MapControls, MapMarker } from '@/components/ui/map';
 import { cn } from '@/lib/utils';
 import { Search, Crosshair, Plus, ShieldAlert, Loader2 } from 'lucide-react';
+import mapService from '../../services/mapService'; // Sesuaikan path ini dengan struktur folder Anda
 
 const MapPage = () => {
   const navigate = useNavigate();
@@ -12,21 +13,34 @@ const MapPage = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [mapCenter, setMapCenter] = useState([109.01, -7.71]);
   const [isLocating, setIsLocating] = useState(false);
+  
+  // State untuk menyimpan titik-titik dari database
+  const [markers, setMarkers] = useState([]);
 
   const mapStyles = {
     voyager: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
   };
 
-  const markers = [
-    { id: 1, lngLat: [109.006, -7.715], status: 'bahaya', label: 'Cilacap Tengah' },
-    { id: 2, lngLat: [108.995, -7.708], status: 'waspada', label: 'Tegalreja' },
-    { id: 3, lngLat: [109.000, -7.720], status: 'waspada', label: 'Donan' },
-    { id: 4, lngLat: [109.012, -7.732], status: 'aman', label: 'Sidakaya' },
-    { id: 5, lngLat: [109.025, -7.705], status: 'waspada', label: 'Gunung Simping' },
-    { id: 6, lngLat: [109.040, -7.700], status: 'bahaya', label: 'TegalKamulyan' },
-    { id: 7, lngLat: [109.015, -7.710], status: 'bahaya', label: 'Sidanegara' },
-    { id: 8, lngLat: [108.990, -7.695], status: 'aman', label: 'Donan' },
-  ];
+  // Mengambil data heatmap saat komponen pertama kali dimuat
+  useEffect(() => {
+    const fetchHeatmapData = async () => {
+      try {
+        const data = await mapService.getMarkers();
+        // Mengubah format dari API (lat, lng, level) ke format yang dibutuhkan UI MapMarker
+        const formattedMarkers = data.map((item) => ({
+          id: item.id,
+          lngLat: [parseFloat(item.lng), parseFloat(item.lat)], // Peta umumnya menggunakan format [Longitude, Latitude]
+          status: item.level.toLowerCase(), // 'bahaya', 'waspada', atau 'aman'
+          label: 'Titik Pantauan' 
+        }));
+        setMarkers(formattedMarkers);
+      } catch (error) {
+        console.error("Gagal memuat data peta:", error);
+      }
+    };
+
+    fetchHeatmapData();
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -41,12 +55,41 @@ const MapPage = () => {
     if (isLocating) return;
     setIsLocating(true);
     
-    setTimeout(() => {
-      const myLocation = [109.012, -7.712];
-      setUserLocation(myLocation);
-      setMapCenter(myLocation);
+    if (!navigator.geolocation) {
+      alert("Browser Anda tidak mendukung deteksi lokasi (GPS).");
       setIsLocating(false);
-    }, 1200);
+      return;
+    }
+
+    // Mengambil lokasi GPS asli dari perangkat
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const myLocation = [longitude, latitude]; // Format untuk Peta [Lng, Lat]
+        
+        setUserLocation(myLocation);
+        setMapCenter(myLocation);
+        
+        // Simpan ke database melalui API
+        try {
+          const token = localStorage.getItem('user_token');
+          if (token) {
+            await mapService.updateUserLocation(latitude, longitude);
+            // Anda bisa menambahkan toast/notifikasi sukses di sini jika mau
+          }
+        } catch (error) {
+          console.error("Gagal menyimpan lokasi ke database:", error);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        alert("Gagal mendapatkan lokasi. Pastikan GPS aktif dan Anda mengizinkan akses lokasi.");
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   return (
@@ -71,7 +114,8 @@ const MapPage = () => {
           </MapMarker>
         )}
 
-        {userLocation && markers.map((marker) => {
+        {/* Me-render marker dari database, bukan dari array dummy lagi */}
+        {markers.map((marker) => {
           const colors = getStatusColor(marker.status);
           return (
             <MapMarker key={marker.id} lngLat={marker.lngLat}>
@@ -125,7 +169,9 @@ const MapPage = () => {
           <div className="flex items-center gap-3 pr-2">
             <div className="hidden md:flex items-center gap-2 bg-slate-100/80 px-4 py-1.5 rounded-full border border-slate-200/50">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-xs font-bold text-slate-600">Warga</span>
+              <span className="text-xs font-bold text-slate-600">
+                {localStorage.getItem('user_role') === 'user' ? 'Warga' : localStorage.getItem('user_role') || 'Tamu'}
+              </span>
             </div>
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#008AC9] to-cyan-400 p-[2px] shadow-sm cursor-pointer hover:scale-105 transition-transform">
               <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-200 flex items-center justify-center">
