@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, MapPin, Upload, ChevronLeft, Send, CheckCircle2, Image as ImageIcon, Map as MapIcon } from 'lucide-react';
+import { Camera, MapPin, Upload, ChevronLeft, Send, AlertTriangle, ShieldCheck } from 'lucide-react';
 import Navbar from '../../components/layout/navbar';
 import exifr from 'exifr';
 import { Map, MapMarker } from '@/components/ui/map';
 import SuccessModal from '@/components/ui/success-modal';
+import reportService from '../../services/reportService'; // Import service baru
 
 const ReportPage = () => {
   const navigate = useNavigate();
@@ -12,8 +13,9 @@ const ReportPage = () => {
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [lngLat, setLngLat] = useState([109.0123, -7.7123]); // Default Cilacap
-  const [locationName, setLocationName] = useState("Jl. Gatot Subroto, Cilacap Tengah");
+  const [locationName, setLocationName] = useState("Menunggu lokasi...");
   const [description, setDescription] = useState("");
+  const [tingkatBahaya, setTingkatBahaya] = useState("rawan"); // State baru untuk API
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = React.useRef(null);
@@ -21,12 +23,22 @@ const ReportPage = () => {
   // Map theme
   const MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-  const updateLocationInfo = (coords) => {
+  const updateLocationInfo = async (coords) => {
     setLngLat(coords);
-    // Simulation of reverse geocoding
-    const mockAreas = ["Cilacap Tengah", "Tegalreja", "Sidanegara", "Donan", "Sidakaya"];
-    const randomArea = mockAreas[Math.floor(Math.random() * mockAreas.length)];
-    setLocationName(`${randomArea}, Cilacap`);
+    try {
+      // Menggunakan reverse geocoding publik gratis (Nominatim OpenStreetMap) untuk nama lokasi
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[1]}&lon=${coords[0]}`);
+      const data = await response.json();
+      if (data && data.display_name) {
+        // Ambil nama jalan/desa dan kabupaten saja agar tidak terlalu panjang
+        const addressParts = data.display_name.split(', ');
+        setLocationName(`${addressParts[0]}, ${addressParts[1] || addressParts[2]}`);
+      } else {
+        setLocationName("Lokasi ditandai di peta");
+      }
+    } catch (error) {
+      setLocationName("Lokasi ditandai di peta");
+    }
   };
 
   const handleFileChange = async (e) => {
@@ -37,11 +49,20 @@ const ReportPage = () => {
     setPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
 
+    // Coba ambil GPS dari foto dulu (jika ada)
     try {
-      // Extract EXIF data
       const gps = await exifr.gps(file);
       if (gps && gps.latitude && gps.longitude) {
         updateLocationInfo([gps.longitude, gps.latitude]);
+      } else {
+        // Jika tidak ada GPS di foto, paksa ambil GPS dari perangkat saat itu juga
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => updateLocationInfo([position.coords.longitude, position.coords.latitude]),
+            (err) => console.warn("GPS Device Error:", err),
+            { enableHighAccuracy: true }
+          );
+        }
       }
     } catch (err) {
       console.warn("Failed to extract EXIF data:", err);
@@ -55,28 +76,30 @@ const ReportPage = () => {
     fileInputRef.current.click();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call and log data
-    const reportData = {
-      location: {
-        name: locationName,
-        coordinates: lngLat
-      },
-      description: description,
-      imageFile: photo,
-      timestamp: new Date().toISOString()
-    };
+    try {
+      // Siapkan FormData sesuai dokumentasi API
+      const formData = new FormData();
+      formData.append('image', photo);
+      formData.append('lat', lngLat[1].toString()); // Latitude
+      formData.append('lng', lngLat[0].toString()); // Longitude
+      formData.append('deskripsi', description);
+      formData.append('tingkat_bahaya', tingkatBahaya);
 
-    console.log("Saving Report Data:", reportData);
-    
-    // Simulate network delay
-    setTimeout(() => {
-      setLoading(false);
+      // Kirim ke backend
+      await reportService.submitReport(formData);
+
+      // Tampilkan modal sukses
       setShowSuccess(true);
-    }, 2000);
+    } catch (error) {
+      console.error("Gagal mengirim laporan:", error);
+      alert(error.message || "Gagal mengirim laporan. Pastikan koneksi internet stabil.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -90,7 +113,7 @@ const ReportPage = () => {
       
       <SuccessModal 
         isOpen={showSuccess}
-        onClose={() => navigate('/')}
+        onClose={() => navigate('/map')}
         title="Laporan Terkirim!"
         message="Terima kasih telah berkontribusi menjaga lingkungan. Laporanmu sedang diverifikasi oleh tim kesehatan."
       />
@@ -118,7 +141,6 @@ const ReportPage = () => {
             <div>
               <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
                 Lapor Cepat
-                <img src="https://cdn-icons-png.flaticon.com/512/854/854878.png" alt="icon" className="w-7 h-7 drop-shadow-sm opacity-80" />
               </h1>
               <p className="text-sm font-medium text-slate-500 mt-1">Laporkan temuan jentik di sekitarmu</p>
             </div>
@@ -136,9 +158,6 @@ const ReportPage = () => {
         {step === 1 && (
           <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xl shadow-blue-900/5 border border-slate-100 relative overflow-hidden">
             
-            {/* Decorative Element */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 to-transparent"></div>
-
             <div className="text-center mb-8 relative z-10">
               <h2 className="text-xl font-bold text-slate-800 mb-2">Unggah Bukti Temuan</h2>
               <p className="text-slate-500 text-sm">Ambil foto genangan air yang berpotensi menjadi sarang nyamuk.</p>
@@ -196,13 +215,13 @@ const ReportPage = () => {
             {/* Location Card */}
             <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-xl shadow-blue-900/5 border border-slate-100 relative overflow-hidden">
               <h3 className="text-lg font-extrabold text-slate-800 mb-6 flex items-center gap-2">
-                <MapIcon className="w-5 h-5 text-[#008AC9]" /> Lokasi Temuan
+                <MapPin className="w-5 h-5 text-[#008AC9]" /> Titik Koordinat GPS
               </h3>
               
               <div className="w-full h-64 bg-slate-100 rounded-3xl mb-5 relative overflow-hidden group border border-slate-200">
                 <Map
                   center={lngLat}
-                  zoom={15}
+                  zoom={16}
                   style={MAP_STYLE}
                   className="w-full h-full cursor-crosshair"
                   onClick={(e) => {
@@ -223,31 +242,55 @@ const ReportPage = () => {
                   </MapMarker>
                 </Map>
                 <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl text-[11px] font-bold text-[#008AC9] border border-blue-50 shadow-sm pointer-events-none">
-                  Seret peta untuk mengatur posisi
+                  Seret peta untuk mengatur posisi jika kurang akurat
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-[#008AC9] shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-sm font-bold text-slate-700 block mb-1">{locationName}</span>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono bg-white px-2 py-1 rounded-md border border-slate-100">
-                    {lngLat[1].toFixed(4)}, {lngLat[0].toFixed(4)}
-                  </span>
-                </div>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                <span className="text-sm font-bold text-slate-700 block mb-1">{locationName}</span>
+                <span className="text-[11px] font-bold text-[#008AC9] uppercase tracking-wider font-mono bg-blue-50 px-2 py-1 rounded-md">
+                  Lat: {lngLat[1].toFixed(5)}, Lng: {lngLat[0].toFixed(5)}
+                </span>
               </div>
             </div>
 
-            {/* Description Card */}
+            {/* Form Detail Tambahan */}
             <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-xl shadow-blue-900/5 border border-slate-100">
-              <h3 className="text-lg font-extrabold text-slate-800 mb-2">Detail Tambahan</h3>
-              <p className="text-sm font-medium text-slate-500 mb-5">Berikan deskripsi singkat untuk membantu petugas lapang.</p>
               
+              {/* Pilihan Tingkat Bahaya (Diperlukan oleh Backend) */}
+              <div className="mb-6">
+                <h3 className="text-sm font-extrabold text-slate-800 mb-3">Tingkat Bahaya Indikasi</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: 'aman', label: 'Aman', icon: <ShieldCheck className="w-4 h-4 mb-1" /> },
+                    { id: 'warning', label: 'Waspada', icon: <AlertTriangle className="w-4 h-4 mb-1" /> },
+                    { id: 'rawan', label: 'Bahaya', icon: <AlertTriangle className="w-4 h-4 mb-1" /> }
+                  ].map((level) => (
+                    <button
+                      key={level.id}
+                      type="button"
+                      onClick={() => setTingkatBahaya(level.id)}
+                      className={`py-3 px-2 rounded-2xl text-xs sm:text-sm font-bold flex flex-col items-center justify-center transition-all ${
+                        tingkatBahaya === level.id
+                          ? level.id === 'aman' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-200 ring-offset-2'
+                          : level.id === 'warning' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30 ring-2 ring-amber-200 ring-offset-2'
+                          : 'bg-rose-500 text-white shadow-lg shadow-rose-500/30 ring-2 ring-rose-200 ring-offset-2'
+                          : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {level.icon}
+                      {level.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <h3 className="text-sm font-extrabold text-slate-800 mb-3">Deskripsi Temuan</h3>
               <textarea 
-                placeholder="Ceritakan detail temuan (Contoh: Pot bunga depan rumah kosong)"
+                placeholder="Ceritakan detail lokasi temuan (Contoh: Genangan air di ban bekas depan warung kosong)"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:border-[#008AC9] focus:ring-4 focus:ring-[#008AC9]/10 transition-all min-h-[140px] text-slate-700 placeholder:text-slate-400 font-medium resize-y"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:border-[#008AC9] focus:ring-4 focus:ring-[#008AC9]/10 transition-all min-h-[120px] text-slate-700 placeholder:text-slate-400 font-medium resize-y"
                 required
               />
             </div>
@@ -262,7 +305,7 @@ const ReportPage = () => {
                 <div className="w-6 h-6 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
                 <>
-                  Kirim Laporan <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  Kirim Laporan Resmi <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </>
               )}
             </button>

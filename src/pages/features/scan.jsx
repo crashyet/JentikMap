@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scan, Cpu, Upload, ChevronLeft, ShieldCheck, Microscope, AlertTriangle, CheckCircle2, Info, Lightbulb, MapPin } from 'lucide-react';
+import { Scan, Cpu, Upload, ChevronLeft, ShieldCheck, Microscope, AlertTriangle, CheckCircle2, Info, Lightbulb, MapPin, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../../components/layout/navbar';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ const ScanPage = () => {
   const [result, setResult] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [locationStatus, setLocationStatus] = useState(''); // State untuk info UI saat cari lokasi
+  const [locationStatus, setLocationStatus] = useState(''); 
   const fileInputRef = useRef(null);
   const MotionDiv = motion.div;
 
@@ -26,7 +26,7 @@ const ScanPage = () => {
           (position) => resolve(position.coords),
           (error) => {
             let errorMsg = 'Gagal mendapatkan lokasi.';
-            if (error.code === 1) errorMsg = 'Izin akses lokasi ditolak. Izinkan aplikasi membaca lokasi Anda untuk melapor.';
+            if (error.code === 1) errorMsg = 'Izin akses lokasi ditolak. Izinkan aplikasi membaca lokasi Anda untuk memindai.';
             reject(new Error(errorMsg));
           },
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -65,8 +65,8 @@ const ScanPage = () => {
       formData.append('lat', coords.latitude.toString());
       formData.append('lng', coords.longitude.toString());
 
-      // 3. Kirim ke endpoint /v1/scan (sesuai dokumentasi)
-      const response = await api.postForm('/v1/scan', formData);
+      // 3. PERBAIKAN: Gunakan endpoint User agar tersimpan di akun mereka
+      const response = await api.postForm('/v1/user/scan', formData);
       const responseData = response.data || {};
 
       // 4. Tampilkan hasil
@@ -213,7 +213,6 @@ const ScanPage = () => {
                 )}
               </div>
               
-              {/* Status Loading Text untuk memberi tahu User sedang apa */}
               {scanning && (
                 <div className="mt-4 text-center">
                   <p className="text-sm font-bold text-[#008AC9] animate-pulse">{locationStatus}</p>
@@ -331,17 +330,25 @@ const ScanPage = () => {
                         </div>
                       </div>
 
+                      {/* PERBAIKAN: Tombol disesuaikan dengan alur API */}
                       <div className="mt-auto pt-6 border-t border-slate-100">
-                        <button 
-                          onClick={() => navigate('/report')}
-                          className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95 group"
-                        >
-                          Lanjut Buat Laporan Resmi
-                          <ChevronLeft className="w-5 h-5 rotate-180 group-hover:translate-x-1 transition-transform" />
-                        </button>
-                        <p className="text-center text-xs text-slate-400 mt-4 font-medium">
-                          Berdasarkan hasil analisis, Anda dapat melanjutkannya menjadi laporan resmi ke petugas.
-                        </p>
+                        {result.status === 'warning' ? (
+                          <>
+                            <button 
+                              onClick={() => navigate('/warga/history')}
+                              className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-slate-900/20 active:scale-95 group"
+                            >
+                              <History className="w-5 h-5" /> Lihat Status Laporan
+                            </button>
+                            <p className="text-center text-[11px] text-rose-500 mt-4 font-bold">
+                              Laporan indikasi bahaya ini telah otomatis diteruskan ke petugas.
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-center text-xs text-slate-400 mt-4 font-medium">
+                            Lingkungan aman. Tidak ada laporan yang dikirim ke petugas.
+                          </p>
+                        )}
                       </div>
                     </MotionDiv>
                   )}

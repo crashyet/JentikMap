@@ -4,36 +4,42 @@ import shieldImg from '../../assets/shield.png';
 import { Map, MapControls, MapMarker } from '@/components/ui/map';
 import { cn } from '@/lib/utils';
 import { Search, Crosshair, Plus, ShieldAlert, Loader2 } from 'lucide-react';
-import mapService from '../../services/mapService'; // Sesuaikan path ini dengan struktur folder Anda
+import mapService from '../../services/mapService';
 
 const MapPage = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [mapTheme] = useState('voyager');
   const [userLocation, setUserLocation] = useState(null);
-  const [mapCenter, setMapCenter] = useState([109.01, -7.71]);
-  const [isLocating, setIsLocating] = useState(false);
   
-  // State untuk menyimpan titik-titik dari database
+  // Center peta default (Cilacap)
+  const [mapCenter, setMapCenter] = useState([109.012, -7.712]); 
+  const [isLocating, setIsLocating] = useState(false);
   const [markers, setMarkers] = useState([]);
 
   const mapStyles = {
     voyager: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
   };
 
-  // Mengambil data heatmap saat komponen pertama kali dimuat
+  // MENGAMBIL DATA HEATMAP DARI DATABASE
   useEffect(() => {
     const fetchHeatmapData = async () => {
       try {
         const data = await mapService.getMarkers();
-        // Mengubah format dari API (lat, lng, level) ke format yang dibutuhkan UI MapMarker
-        const formattedMarkers = data.map((item) => ({
-          id: item.id,
-          lngLat: [parseFloat(item.lng), parseFloat(item.lat)], // Peta umumnya menggunakan format [Longitude, Latitude]
-          status: item.level.toLowerCase(), // 'bahaya', 'waspada', atau 'aman'
-          label: 'Titik Pantauan' 
-        }));
-        setMarkers(formattedMarkers);
+        
+        // Cek di Console Browser Anda dengan menekan F12! 
+        // Jika array muncul, berarti koneksi ke backend SUDAH BERHASIL.
+        console.log("Data Titik Rawan dari API:", data); 
+
+        if (data && data.length > 0) {
+          const formattedMarkers = data.map((item) => ({
+            id: item.id,
+            lngLat: [parseFloat(item.lng), parseFloat(item.lat)], 
+            status: item.level ? item.level.toLowerCase() : 'aman', 
+            label: 'Titik Pantauan' 
+          }));
+          setMarkers(formattedMarkers);
+        }
       } catch (error) {
         console.error("Gagal memuat data peta:", error);
       }
@@ -46,7 +52,9 @@ const MapPage = () => {
     switch (status) {
       case 'aman': return { core: 'bg-emerald-500', ring: 'bg-emerald-400', border: 'border-emerald-100' };
       case 'waspada': return { core: 'bg-amber-500', ring: 'bg-amber-400', border: 'border-amber-100' };
-      case 'bahaya': return { core: 'bg-rose-500', ring: 'bg-rose-400', border: 'border-rose-100' };
+      case 'bahaya': 
+      case 'rawan': // Menambahkan fallback untuk kata 'rawan'
+        return { core: 'bg-rose-500', ring: 'bg-rose-400', border: 'border-rose-100' };
       default: return { core: 'bg-slate-500', ring: 'bg-slate-400', border: 'border-slate-100' };
     }
   };
@@ -61,21 +69,18 @@ const MapPage = () => {
       return;
     }
 
-    // Mengambil lokasi GPS asli dari perangkat
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        const myLocation = [longitude, latitude]; // Format untuk Peta [Lng, Lat]
+        const myLocation = [longitude, latitude]; 
         
         setUserLocation(myLocation);
-        setMapCenter(myLocation);
+        setMapCenter(myLocation); // Pindahkan kamera ke lokasi user
         
-        // Simpan ke database melalui API
         try {
           const token = localStorage.getItem('user_token');
           if (token) {
             await mapService.updateUserLocation(latitude, longitude);
-            // Anda bisa menambahkan toast/notifikasi sukses di sini jika mau
           }
         } catch (error) {
           console.error("Gagal menyimpan lokasi ke database:", error);
@@ -85,11 +90,36 @@ const MapPage = () => {
       },
       (error) => {
         console.error("Error getting location:", error);
-        alert("Gagal mendapatkan lokasi. Pastikan GPS aktif dan Anda mengizinkan akses lokasi.");
+        alert("Gagal mendapatkan lokasi. Pastikan GPS aktif dan diizinkan.");
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  // FUNGSI PENCARIAN BARU
+  const handleSearch = async (e) => {
+    // Jalankan pencarian jika tombol Enter (key code 13) ditekan
+    if (e.key === 'Enter' && searchQuery.trim() !== '') {
+      try {
+        // Menggunakan API Geocoding gratis dari OpenStreetMap
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}`);
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+          // Ambil hasil pertama yang paling relevan
+          const { lat, lon } = data[0];
+          
+          // Geser peta ke lokasi yang dicari
+          setMapCenter([parseFloat(lon), parseFloat(lat)]);
+        } else {
+          alert("Lokasi tidak ditemukan. Coba gunakan kata kunci yang lebih spesifik.");
+        }
+      } catch (error) {
+        console.error("Error searching location:", error);
+        alert("Gagal melakukan pencarian. Periksa koneksi Anda.");
+      }
+    }
   };
 
   return (
@@ -114,7 +144,6 @@ const MapPage = () => {
           </MapMarker>
         )}
 
-        {/* Me-render marker dari database, bukan dari array dummy lagi */}
         {markers.map((marker) => {
           const colors = getStatusColor(marker.status);
           return (
@@ -128,7 +157,7 @@ const MapPage = () => {
                   colors.core
                 )}></div>
 
-                <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-xl text-xs font-bold text-slate-700 whitespace-nowrap opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 border border-white/50 flex items-center gap-2">
+                <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-xl text-xs font-bold text-slate-700 whitespace-nowrap opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 border border-white/50 flex items-center gap-2 z-50">
                   <div className={cn("w-2 h-2 rounded-full", colors.core)}></div>
                   {marker.label}
                 </div>
@@ -159,9 +188,10 @@ const MapPage = () => {
             </div>
             <input
               type="text"
-              placeholder="Cari desa atau kecamatan..."
+              placeholder="Cari desa atau kecamatan... (Tekan Enter)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch} // TAMBAHKAN EVENT ONKEYDOWN DISINI
               className="w-full bg-slate-100/50 border-transparent focus:border-[#008AC9]/30 rounded-full py-2.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white transition-all placeholder:text-slate-400 font-medium text-slate-700"
             />
           </div>
