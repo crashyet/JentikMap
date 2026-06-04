@@ -28,7 +28,6 @@ const MapPage = () => {
         const data = await mapService.getMarkers();
         
         // Cek di Console Browser Anda dengan menekan F12! 
-        // Jika array muncul, berarti koneksi ke backend SUDAH BERHASIL.
         console.log("Data Titik Rawan dari API:", data); 
 
         if (data && data.length > 0) {
@@ -53,7 +52,7 @@ const MapPage = () => {
       case 'aman': return { core: 'bg-emerald-500', ring: 'bg-emerald-400', border: 'border-emerald-100' };
       case 'waspada': return { core: 'bg-amber-500', ring: 'bg-amber-400', border: 'border-amber-100' };
       case 'bahaya': 
-      case 'rawan': // Menambahkan fallback untuk kata 'rawan'
+      case 'rawan': // Fallback jika backend mengembalikan kata 'rawan'
         return { core: 'bg-rose-500', ring: 'bg-rose-400', border: 'border-rose-100' };
       default: return { core: 'bg-slate-500', ring: 'bg-slate-400', border: 'border-slate-100' };
     }
@@ -97,13 +96,12 @@ const MapPage = () => {
     );
   };
 
-  // FUNGSI PENCARIAN BARU
-  const handleSearch = async (e) => {
-    // Jalankan pencarian jika tombol Enter (key code 13) ditekan
-    if (e.key === 'Enter' && searchQuery.trim() !== '') {
+  // FUNGSI EKSEKUSI PENCARIAN (Bisa dipanggil oleh klik icon atau tombol Enter)
+  const executeSearch = async () => {
+    if (searchQuery.trim() !== '') {
       try {
-        // Menggunakan API Geocoding gratis dari OpenStreetMap
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}`);
+        // Menambahkan parameter 'Cilacap' agar hasil pencarian lebih akurat ke wilayah target
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery} Cilacap`);
         const data = await response.json();
 
         if (data && data.length > 0) {
@@ -113,7 +111,7 @@ const MapPage = () => {
           // Geser peta ke lokasi yang dicari
           setMapCenter([parseFloat(lon), parseFloat(lat)]);
         } else {
-          alert("Lokasi tidak ditemukan. Coba gunakan kata kunci yang lebih spesifik.");
+          alert(`Lokasi "${searchQuery}" tidak ditemukan. Coba gunakan nama desa/kecamatan yang lebih spesifik.`);
         }
       } catch (error) {
         console.error("Error searching location:", error);
@@ -122,11 +120,19 @@ const MapPage = () => {
     }
   };
 
+  // FUNGSI TRIGGER SAAT TOMBOL ENTER DITEKAN
+  const handleSearch = (e) => {
+    if (e.key === 'Enter') {
+      executeSearch();
+    }
+  };
+
   return (
     <div className="relative w-full h-screen bg-slate-50 overflow-hidden font-sans selection:bg-[#008AC9]/20">
 
       <Map
-        key={mapTheme}
+        // PERBAIKAN PENTING: Key ini memaksa peta untuk re-render dan bergeser saat mapCenter berubah
+        key={`${mapTheme}-${mapCenter[0]}-${mapCenter[1]}`} 
         center={mapCenter}
         zoom={userLocation ? 15 : 13}
         style={mapStyles[mapTheme]}
@@ -182,16 +188,21 @@ const MapPage = () => {
             </span>
           </div>
 
+          {/* AREA PENCARIAN DIPERBARUI */}
           <div className="flex-1 max-w-sm relative group">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-slate-400 group-focus-within:text-[#008AC9] transition-colors" />
+            <div 
+              className="absolute inset-y-0 left-4 flex items-center cursor-pointer z-10"
+              onClick={executeSearch} // Ikon Search kini bisa diklik
+              title="Klik untuk mencari"
+            >
+              <Search className="w-4 h-4 text-slate-400 group-focus-within:text-[#008AC9] transition-colors hover:scale-110" />
             </div>
             <input
               type="text"
               placeholder="Cari desa atau kecamatan... (Tekan Enter)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearch} // TAMBAHKAN EVENT ONKEYDOWN DISINI
+              onKeyDown={handleSearch} 
               className="w-full bg-slate-100/50 border-transparent focus:border-[#008AC9]/30 rounded-full py-2.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white transition-all placeholder:text-slate-400 font-medium text-slate-700"
             />
           </div>
