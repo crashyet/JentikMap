@@ -101,7 +101,7 @@ const MapPage = () => {
     if (searchQuery.trim() !== '') {
       try {
         // Menambahkan parameter 'Cilacap' agar hasil pencarian lebih akurat ke wilayah target
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery} Cilacap`);
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery} Indonesia`);
         const data = await response.json();
 
         if (data && data.length > 0) {

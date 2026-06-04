@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radar, ChevronLeft, MapPin, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
-import { Map, MapControls, MapMarker } from '@/components/ui/map';
+import { Radar, ChevronLeft, MapPin, AlertTriangle, ShieldCheck, Loader2, X } from 'lucide-react';
+import { Map, MapMarker } from '@/components/ui/map';
 import { cn } from '@/lib/utils';
 import Navbar from '../../components/layout/navbar';
 import mapService from '../../services/mapService';
@@ -55,7 +55,6 @@ const RadarPage = () => {
 
         try {
           // Menggunakan Endpoint Public yang wajib menerima parameter lat & lng
-          // Ini mencegah error jika akun user belum memiliki lokasi tersimpan di database
           const data = await mapService.checkDistancePublic(latitude, longitude);
           
           // Data dari backend: { status, jarak_meter, kategori, message }
@@ -88,6 +87,11 @@ const RadarPage = () => {
     }
   };
 
+  // Fungsi untuk menutup popup hasil pencarian
+  const closeResult = () => {
+    setResult(null);
+  };
+
   return (
     <div className="relative min-h-screen bg-slate-900 font-sans text-white selection:bg-[#008AC9]/20 overflow-hidden flex flex-col">
       <Navbar />
@@ -101,8 +105,6 @@ const RadarPage = () => {
           style={mapStyles[mapTheme]}
           className="w-full h-full opacity-60 grayscale-[30%] transition-all duration-1000 ease-in-out mix-blend-luminosity"
         >
-          {/* Sembunyikan kontrol peta bawaan agar lebih imersif */}
-          
           {userLocation && (
             <MapMarker lngLat={userLocation}>
               <div className="relative flex items-center justify-center pointer-events-none">
@@ -132,8 +134,15 @@ const RadarPage = () => {
             </MapMarker>
           )}
         </Map>
-        {/* Overlay gelap agar UI terbaca jelas */}
-        <div className="absolute inset-0 bg-slate-900/40 pointer-events-none"></div>
+        
+        {/* FITUR CLICK OUTSIDE: Overlay gelap yang bisa diklik untuk menutup card */}
+        <div 
+          onClick={closeResult}
+          className={cn(
+            "absolute inset-0 transition-colors duration-500",
+            result ? "bg-slate-900/60 pointer-events-auto cursor-pointer" : "bg-slate-900/40 pointer-events-none"
+          )}
+        ></div>
       </div>
 
 
@@ -158,14 +167,27 @@ const RadarPage = () => {
 
         {/* Status & Controls Panel */}
         <div className="w-full text-center space-y-4 mt-auto pointer-events-auto">
+          
           {error && (
-            <div className="p-4 bg-rose-500/90 backdrop-blur-md border border-rose-400 text-white rounded-2xl text-sm font-bold shadow-2xl animate-in slide-in-from-bottom-4">
+            <div className="relative p-4 bg-rose-500/90 backdrop-blur-md border border-rose-400 text-white rounded-2xl text-sm font-bold shadow-2xl animate-in slide-in-from-bottom-4">
+              <button onClick={() => setError('')} className="absolute top-2 right-2 p-1 hover:bg-rose-600 rounded-full transition-colors">
+                <X className="w-4 h-4" />
+              </button>
               {error}
             </div>
           )}
 
           {result && !isScanning && (
-            <div className={cn("p-6 rounded-[2rem] border shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 flex flex-col items-center", getStatusDisplay(result.kategori).bg, getStatusDisplay(result.kategori).ring)}>
+            <div className={cn("relative p-6 rounded-[2rem] border shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 flex flex-col items-center", getStatusDisplay(result.kategori).bg, getStatusDisplay(result.kategori).ring)}>
+              
+              {/* TOMBOL TUTUP (X) */}
+              <button 
+                onClick={closeResult}
+                className="absolute top-5 right-5 p-2 rounded-full hover:bg-black/5 transition-colors text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
               <div className="mb-3 bg-white p-3 rounded-full shadow-sm">
                 {getStatusDisplay(result.kategori).icon}
               </div>
