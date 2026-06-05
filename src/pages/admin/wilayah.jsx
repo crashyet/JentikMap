@@ -1,19 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import adminService from '../../services/adminService';
-import { Loader2, Search, Trash2, MapPin, Plus, ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, Search, Trash2, MapPin, Plus, ShieldCheck, AlertTriangle, RefreshCw, X, Map } from 'lucide-react';
 
 const DataWilayah = () => {
-  // State Data API (Diberi nilai default yang aman)
+  // State Data API
   const [summary, setSummary] = useState({ rawan: 0, waspada: 0, aman: 0 });
   const [districts, setDistricts] = useState([]);
   
-  // State UI
+  // State UI Utama
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch data saat komponen dimuat
+  // State untuk Modal Tambah Wilayah
+  const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [namaWilayah, setNamaWilayah] = useState('');
+  // Default minimal 3 titik untuk membuat bangun datar (polygon)
+  const [points, setPoints] = useState([
+    { lat: '', lng: '' },
+    { lat: '', lng: '' },
+    { lat: '', lng: '' }
+  ]);
+
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -23,13 +33,11 @@ const DataWilayah = () => {
       setIsLoading(true);
       setError('');
       
-      // Memanggil API secara paralel
       const [summaryData, districtsData] = await Promise.all([
         adminService.getDistrictSummary(),
         adminService.getDistricts()
       ]);
       
-      // KODE ANTI CRASH: Memastikan data yang di-set tidak undefined
       setSummary(summaryData || { rawan: 0, waspada: 0, aman: 0 });
       setDistricts(Array.isArray(districtsData) ? districtsData : []);
       
@@ -67,14 +75,72 @@ const DataWilayah = () => {
     }
   };
 
-  // KODE ANTI CRASH: Filter pencarian lokal yang aman jika nama wilayah kosong
+  // --- FUNGSI UNTUK MODAL TAMBAH WILAYAH ---
+  const handleAddPoint = () => {
+    setPoints([...points, { lat: '', lng: '' }]);
+  };
+
+  const handleRemovePoint = (indexToRemove) => {
+    if (points.length <= 3) {
+      alert("Sebuah wilayah (polygon) membutuhkan minimal 3 titik sudut.");
+      return;
+    }
+    setPoints(points.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handlePointChange = (index, field, value) => {
+    const newPoints = [...points];
+    newPoints[index][field] = value;
+    setPoints(newPoints);
+  };
+
+  const handleSubmitWilayah = async (e) => {
+    e.preventDefault();
+    
+    // Validasi data tidak boleh kosong
+    const validPoints = points.filter(p => p.lat !== '' && p.lng !== '');
+    if (validPoints.length < 3) {
+      alert("Mohon lengkapi minimal 3 titik koordinat untuk membentuk suatu wilayah.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Format data untuk Backend (Array of Array: [[lat, lng], [lat, lng]])
+      const formattedCoordinates = validPoints.map(p => [parseFloat(p.lat), parseFloat(p.lng)]);
+      
+      // AUTO-CLOSE LOOP: Menambahkan titik pertama ke akhir array agar polygon tertutup (Syarat wajib backend)
+      formattedCoordinates.push([...formattedCoordinates[0]]);
+
+      await adminService.createDistrict({
+        nama: namaWilayah,
+        coordinates: formattedCoordinates
+      });
+
+      alert("Wilayah baru berhasil ditambahkan!");
+      
+      // Reset Modal & Refresh Data
+      setShowModal(false);
+      setNamaWilayah('');
+      setPoints([{ lat: '', lng: '' }, { lat: '', lng: '' }, { lat: '', lng: '' }]);
+      fetchAllData();
+      
+    } catch (err) {
+      alert(err.response?.data?.error || "Gagal menambahkan wilayah. Pastikan nama wilayah belum ada sebelumnya.");
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredDistricts = districts.filter(d => {
-    const namaWilayah = d?.nama || d?.name || ""; 
-    return namaWilayah.toLowerCase().includes(searchQuery.toLowerCase());
+    const namaWil = d?.nama || d?.name || ""; 
+    return namaWil.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
+    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm min-h-[500px] flex flex-col relative">
       
       {/* HEADER & CONTROLS */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
@@ -107,7 +173,7 @@ const DataWilayah = () => {
           </button>
 
           <button 
-            onClick={() => alert("Fitur Gambar Polygon Wilayah (Segera Hadir)")}
+            onClick={() => setShowModal(true)}
             className="px-4 py-2 bg-[#008AC9] text-white font-semibold rounded-xl text-sm hover:bg-[#0076ad] shadow-sm flex items-center justify-center gap-2 transition-colors active:scale-95 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" /> Tambah Wilayah
@@ -181,7 +247,6 @@ const DataWilayah = () => {
               </tr>
             ) : (
               filteredDistricts.map((district) => {
-                // KODE ANTI CRASH: Kalkulasi aman dari NaN (Not a Number)
                 const aman = district?.aman || 0;
                 const waspada = district?.waspada || 0;
                 const rawan = district?.rawan || 0;
@@ -221,6 +286,99 @@ const DataWilayah = () => {
           </tbody>
         </table>
       </div>
+
+      {/* --- MODAL TAMBAH WILAYAH --- */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            
+            <div className="flex justify-between items-center p-5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 text-[#008AC9] rounded-lg"><Map className="w-5 h-5"/></div>
+                <h3 className="text-lg font-bold text-slate-800">Pemetaan Wilayah Baru</h3>
+              </div>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-rose-500 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitWilayah} className="flex-1 overflow-y-auto p-5 flex flex-col gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Nama Kecamatan / Wilayah</label>
+                <input 
+                  type="text" 
+                  required
+                  value={namaWilayah}
+                  onChange={(e) => setNamaWilayah(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#008AC9] focus:ring-2 focus:ring-[#008AC9]/20"
+                  placeholder="Contoh: Kecamatan Cilacap Selatan"
+                />
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="block text-sm font-bold text-slate-700">Titik Koordinat (Polygon Batas)</label>
+                  <button 
+                    type="button" 
+                    onClick={handleAddPoint}
+                    className="text-xs font-bold text-[#008AC9] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Tambah Titik Sudut
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  Masukkan minimal 3 titik sudut koordinat yang mengelilingi wilayah tersebut. <b>Sistem akan otomatis menutup garis polygon Anda.</b>
+                </p>
+
+                <div className="space-y-3">
+                  {points.map((point, idx) => (
+                    <div key={idx} className="flex gap-3 items-start animate-in slide-in-from-left-2">
+                      <div className="flex-1">
+                        <input 
+                          type="number" step="any" required placeholder="Latitude (Contoh: -7.712)"
+                          value={point.lat} onChange={(e) => handlePointChange(idx, 'lat', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#008AC9]"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <input 
+                          type="number" step="any" required placeholder="Longitude (Contoh: 109.012)"
+                          value={point.lng} onChange={(e) => handlePointChange(idx, 'lng', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#008AC9]"
+                        />
+                      </div>
+                      <button 
+                        type="button" onClick={() => handleRemovePoint(idx)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-200 transition-colors mt-0.5"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </form>
+
+            <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3">
+              <button 
+                type="button" onClick={() => setShowModal(false)}
+                className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-white transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                type="submit" onClick={handleSubmitWilayah} disabled={isSubmitting}
+                className="flex-[2] py-2.5 bg-[#008AC9] text-white font-bold rounded-xl hover:bg-[#0076ad] transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                Simpan & Petakan Wilayah
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
