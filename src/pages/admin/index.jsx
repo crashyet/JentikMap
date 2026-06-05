@@ -3,11 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, UserPlus, AlertTriangle, TrendingUp, Activity, Clock, CheckCircle2, XCircle, FileText, MapPin, X, Loader2, MessageSquare } from 'lucide-react';
 import adminService from '../../services/adminService';
 
-// BASE_URL hanya dibutuhkan di sini untuk merender gambar dari path /uploads/...
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://gdgoc.skyibe.my.id';
 
 const AdminDashboard = () => {
-  // State Data
+  // State Data (Default aman)
   const [dashboardStats, setDashboardStats] = useState({ total_warga: 0, kader_aktif: 0, laporan_pending: 0, notifikasi_darurat: 0 });
   const [pendingReports, setPendingReports] = useState([]);
   const [emergencyAlerts, setEmergencyAlerts] = useState([]);
@@ -17,38 +16,60 @@ const AdminDashboard = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
-  // LIFECYCLE KOMPONEN
   useEffect(() => {
     fetchAllData();
+    let sseConnection = null;
 
-    // Membuka koneksi SSE Real-Time via Service
-    const sseConnection = adminService.listenEmergencyNotifications(
-      (newData) => {
-        console.log("🚨 Notifikasi Darurat Masuk:", newData);
-        setEmergencyAlerts(prev => [newData, ...prev]);
-      },
-      (error) => {
-        console.error("Koneksi SSE Terputus", error);
-      }
-    );
+    // KODE ANTI CRASH: Cek apakah fungsi listenEmergencyNotifications ada di adminService
+    if (typeof adminService.listenEmergencyNotifications === 'function') {
+      sseConnection = adminService.listenEmergencyNotifications(
+        (newData) => {
+          console.log("🚨 Notifikasi Darurat Masuk:", newData);
+          setEmergencyAlerts(prev => [newData, ...prev]);
+        },
+        (error) => {
+          console.error("Koneksi SSE Terputus", error);
+        }
+      );
+    } else {
+      console.warn("⚠️ Fungsi listenEmergencyNotifications tidak ditemukan di adminService.js");
+    }
 
-    // Membersihkan memori (tutup koneksi) saat pindah halaman
     return () => {
-      if (sseConnection) sseConnection.close();
+      if (sseConnection && typeof sseConnection.close === 'function') sseConnection.close();
     };
   }, []);
 
-  // FUNGSI FETCH DATA
   const fetchAllData = async () => {
     try {
       setIsLoading(true);
-      const [statsData, reportsData] = await Promise.all([
-        adminService.getDashboardSummary(),
-        adminService.getPendingReports()
-      ]);
       
-      setDashboardStats(statsData || { total_warga: 0, kader_aktif: 0, laporan_pending: 0, notifikasi_darurat: 0 });
-      setPendingReports(reportsData || []);
+      // Mencegah crash jika fungsi getDashboardSummary belum di-save di adminService
+      const statsPromise = typeof adminService.getDashboardSummary === 'function' 
+        ? adminService.getDashboardSummary() 
+        : Promise.resolve({});
+        
+      const reportsPromise = typeof adminService.getPendingReports === 'function'
+        ? adminService.getPendingReports()
+        : Promise.resolve([]);
+
+      const [statsData, reportsData] = await Promise.all([statsPromise, reportsPromise]);
+      
+      // KODE ANTI CRASH: Amankan data Statistik
+      setDashboardStats({
+        total_warga: statsData?.total_warga || 0,
+        kader_aktif: statsData?.kader_aktif || 0,
+        laporan_pending: statsData?.laporan_pending || 0,
+        notifikasi_darurat: statsData?.notifikasi_darurat || 0
+      });
+
+      // KODE ANTI CRASH: Pastikan reportsData benar-benar sebuah Array sebelum di set
+      const safeReportsArray = Array.isArray(reportsData) 
+        ? reportsData 
+        : (reportsData?.data || []);
+        
+      setPendingReports(Array.isArray(safeReportsArray) ? safeReportsArray : []);
+
     } catch (error) {
       console.error("Gagal memuat data dashboard", error);
     } finally {
@@ -56,8 +77,12 @@ const AdminDashboard = () => {
     }
   };
 
-  // FUNGSI AKSI (TERIMA/TOLAK)
   const handleVerify = async (id, status) => {
+    if (typeof adminService.verifyReport !== 'function') {
+      alert("Fungsi verifyReport tidak ditemukan di adminService.js. Pastikan sudah di-save.");
+      return;
+    }
+
     const catatan = window.prompt(
       `Tanggapan Admin untuk ${status === 'accepted' ? 'MENERIMA' : 'MENOLAK'} laporan ini (Opsional):`, 
       status === 'accepted' ? 'Laporan valid dan telah dimasukkan ke peta.' : 'Bukti tidak sesuai.'
@@ -70,8 +95,8 @@ const AdminDashboard = () => {
       await adminService.verifyReport(id, status, catatan);
       alert(`Laporan berhasil ${status === 'accepted' ? 'diterima' : 'ditolak'}.`);
       
-      fetchAllData(); // Refresh antrean
-      setSelectedReport(null); // Tutup modal jika sedang terbuka
+      fetchAllData(); 
+      setSelectedReport(null); 
     } catch (error) {
       alert(error.response?.data?.error || "Terjadi kesalahan saat memverifikasi laporan.");
     } finally {
@@ -171,10 +196,10 @@ const AdminDashboard = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {pendingReports.map((report) => (
-                <div key={report.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                <div key={report?.id || Math.random()} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow flex flex-col">
                   
                   <div className="relative h-48 bg-slate-100 border-b border-slate-100">
-                    {report.image_url ? (
+                    {report?.image_url ? (
                       <img src={`${BASE_URL}${report.image_url}`} alt="Bukti" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
@@ -187,14 +212,14 @@ const AdminDashboard = () => {
                   
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold mb-3 bg-slate-50 inline-block w-fit px-2 py-1 rounded-md border border-slate-100">
-                      <Clock size={12} /> {new Date(report.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                      <Clock size={12} /> {report?.created_at ? new Date(report.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Waktu tidak diketahui'}
                     </div>
                     
                     <div className="flex items-start gap-2 mb-4">
                       <MapPin size={16} className="text-[#008AC9] shrink-0 mt-0.5" />
                       <div>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Koordinat</p>
-                        <p className="text-sm font-mono text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{report.lat}, {report.lng}</p>
+                        <p className="text-sm font-mono text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{report?.lat || '-'}, {report?.lng || '-'}</p>
                       </div>
                     </div>
 
@@ -220,12 +245,12 @@ const AdminDashboard = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
               <div className="flex justify-between items-center p-5 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800">Detail Laporan #{selectedReport.id}</h3>
+                <h3 className="text-lg font-bold text-slate-800">Detail Laporan #{selectedReport?.id || '-'}</h3>
                 <button onClick={() => setSelectedReport(null)} className="text-slate-400 hover:text-rose-500 bg-slate-50 p-1.5 rounded-lg"><X className="w-5 h-5" /></button>
               </div>
               
               <div className="flex-1 overflow-y-auto p-5">
-                {selectedReport.image_url ? (
+                {selectedReport?.image_url ? (
                   <div className="w-full bg-slate-100 rounded-xl overflow-hidden mb-5 border border-slate-200">
                     <img src={`${BASE_URL}${selectedReport.image_url}`} alt="Detail Bukti" className="w-full h-auto max-h-[400px] object-contain" />
                   </div>
@@ -239,11 +264,13 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-2 gap-4 mb-5">
                   <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Waktu Dibuat</p>
-                    <p className="text-sm font-medium text-slate-700">{new Date(selectedReport.created_at).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' })}</p>
+                    <p className="text-sm font-medium text-slate-700">
+                      {selectedReport?.created_at ? new Date(selectedReport.created_at).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' }) : '-'}
+                    </p>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Koordinat Area</p>
-                    <p className="text-sm font-mono font-bold text-[#008AC9]">{selectedReport.lat}, {selectedReport.lng}</p>
+                    <p className="text-sm font-mono font-bold text-[#008AC9]">{selectedReport?.lat || '-'}, {selectedReport?.lng || '-'}</p>
                   </div>
                 </div>
               </div>
