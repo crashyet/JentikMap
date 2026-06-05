@@ -1,14 +1,17 @@
 import api from './api';
 
-// Jika tidak ada di variabel env, gunakan URL default
+// Gunakan URL dari .env atau fallback ke default server
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://gdgoc.skyibe.my.id';
 
 const adminService = {
-  // --- 1. DASHBOARD & NOTIFIKASI ---
+  // ==========================================
+  // 1. DASHBOARD & NOTIFIKASI
+  // ==========================================
   
   async getDashboardSummary() {
     try {
       const response = await api.get('/v1/admin/dashboard');
+      // Sesuai API Docs: response.data.data berisi { total_warga, kader_aktif, laporan_pending... }
       return response.data.data; 
     } catch (error) {
       console.error('Error fetching dashboard summary:', error);
@@ -16,12 +19,12 @@ const adminService = {
     }
   },
 
-  // Fungsi khusus untuk menangani Server-Sent Events (SSE) Darurat
   listenEmergencyNotifications(onMessageCallback, onErrorCallback) {
     const token = localStorage.getItem('user_token');
     if (!token) return null;
 
-    // Menyisipkan token ke URL karena EventSource bawaan tidak mendukung header
+    // Bawaan browser EventSource tidak bisa kirim header Authorization, 
+    // jadi kita selipkan token di URL parameter
     const streamUrl = `${BASE_URL}/api/v1/admin/notifications/stream?token=${token}`;
     const eventSource = new EventSource(streamUrl);
     
@@ -32,19 +35,21 @@ const adminService = {
 
     eventSource.onerror = (error) => {
       if (onErrorCallback) onErrorCallback(error);
-      eventSource.close(); // Tutup jika error parah
+      eventSource.close();
     };
 
-    return eventSource; // Kembalikan objek agar bisa di-close oleh komponen saat pindah halaman
+    return eventSource;
   },
 
-
-  // --- 2. MANAJEMEN LAPORAN & INTERVENSI ---
+  // ==========================================
+  // 2. MANAJEMEN LAPORAN (VERIFIKASI & INTERVENSI)
+  // ==========================================
 
   async getPendingReports() {
     try {
       const response = await api.get('/v1/admin/reports/pending');
-      return response.data.data || []; // Di API baru, array laporan ada di dalam 'data'
+      // Sesuai API Docs: Array laporan ada di dalam properti 'data'
+      return response.data.data || []; 
     } catch (error) {
       console.error('Error fetching pending reports:', error);
       throw error;
@@ -74,8 +79,9 @@ const adminService = {
     }
   },
 
-
-  // --- 3. MANAJEMEN PENGGUNA (KADER & WARGA) ---
+  // ==========================================
+  // 3. MANAJEMEN USER (KADER & WARGA)
+  // ==========================================
 
   async getKaders() {
     try {
@@ -89,6 +95,7 @@ const adminService = {
 
   async getWargas() {
     try {
+      // Wajib memanggil role=user agar terpisah dari admin dan kader
       const response = await api.get('/v1/admin/users?role=user');
       return response.data.data || [];
     } catch (error) {
@@ -117,8 +124,9 @@ const adminService = {
     }
   },
 
-
-  // --- 4. MANAJEMEN WILAYAH ---
+  // ==========================================
+  // 4. MANAJEMEN WILAYAH (DISTRICTS)
+  // ==========================================
 
   async getDistrictSummary() {
     try {
