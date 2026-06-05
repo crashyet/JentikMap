@@ -3,7 +3,7 @@ import adminService from '../../services/adminService';
 import { Loader2, Search, Trash2, MapPin, Plus, ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const DataWilayah = () => {
-  // State Data API
+  // State Data API (Diberi nilai default yang aman)
   const [summary, setSummary] = useState({ rawan: 0, waspada: 0, aman: 0 });
   const [districts, setDistricts] = useState([]);
   
@@ -22,30 +22,33 @@ const DataWilayah = () => {
     try {
       setIsLoading(true);
       setError('');
-      // Memanggil 2 API sekaligus secara paralel agar lebih cepat
+      
+      // Memanggil API secara paralel
       const [summaryData, districtsData] = await Promise.all([
         adminService.getDistrictSummary(),
         adminService.getDistricts()
       ]);
       
-      setSummary(summaryData);
-      setDistricts(districtsData);
+      // KODE ANTI CRASH: Memastikan data yang di-set tidak undefined
+      setSummary(summaryData || { rawan: 0, waspada: 0, aman: 0 });
+      setDistricts(Array.isArray(districtsData) ? districtsData : []);
+      
     } catch (err) {
       setError('Gagal memuat data wilayah dari server. Periksa koneksi Anda.');
-      console.error(err);
+      console.error("Error Fetch API:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (id, nama) => {
-    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus wilayah ${nama}? Semua laporan di dalamnya akan menjadi "Unassigned".`);
+    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus wilayah ${nama || 'ini'}?`);
     if (!confirmDelete) return;
 
     try {
       await adminService.deleteDistrict(id);
-      alert(`Wilayah ${nama} berhasil dihapus.`);
-      fetchAllData(); // Refresh tabel setelah dihapus
+      alert(`Wilayah berhasil dihapus.`);
+      fetchAllData();
     } catch (err) {
       alert(err.response?.data?.error || "Gagal menghapus wilayah.");
     }
@@ -55,8 +58,8 @@ const DataWilayah = () => {
     try {
       setIsSyncing(true);
       const res = await adminService.reassignDistricts();
-      alert(`Berhasil! ${res.assigned_count || 0} laporan telah dimasukkan ke wilayah yang tepat.`);
-      fetchAllData(); // Refresh data untuk melihat perubahan angka
+      alert(`Berhasil! ${res?.assigned_count || 0} laporan telah dimasukkan ke wilayah yang tepat.`);
+      fetchAllData();
     } catch (err) {
       alert("Gagal mensinkronkan data wilayah.");
     } finally {
@@ -64,10 +67,11 @@ const DataWilayah = () => {
     }
   };
 
-  // Filter pencarian lokal (Client-side search)
-  const filteredDistricts = districts.filter(d => 
-    d.nama.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // KODE ANTI CRASH: Filter pencarian lokal yang aman jika nama wilayah kosong
+  const filteredDistricts = districts.filter(d => {
+    const namaWilayah = d?.nama || d?.name || ""; 
+    return namaWilayah.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm min-h-[500px] flex flex-col">
@@ -80,7 +84,6 @@ const DataWilayah = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          {/* Kolom Pencarian */}
           <div className="relative w-full sm:w-56">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Search className="w-4 h-4 text-slate-400" />
@@ -98,7 +101,6 @@ const DataWilayah = () => {
             onClick={handleReassign}
             disabled={isSyncing || isLoading}
             className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold rounded-xl text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            title="Memasukkan laporan yang belum memiliki wilayah berdasarkan koordinatnya"
           >
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
             Sinkronkan Laporan
@@ -113,13 +115,13 @@ const DataWilayah = () => {
         </div>
       </div>
 
-      {/* KARTU RINGKASAN (Menggunakan endpoint /summary) */}
+      {/* KARTU RINGKASAN AMAN */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="p-5 border border-rose-200 bg-rose-50 rounded-2xl flex items-center justify-between shadow-sm">
            <div>
              <h3 className="text-rose-700 font-bold mb-1 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4"/> Rawan Tinggi</h3>
              <p className="text-3xl font-black text-rose-800">
-               {isLoading ? <Loader2 className="w-6 h-6 animate-spin mt-2 text-rose-300" /> : summary.rawan}
+               {isLoading ? <Loader2 className="w-6 h-6 animate-spin mt-2 text-rose-300" /> : (summary?.rawan || 0)}
                {!isLoading && <span className="text-sm font-bold text-rose-600 ml-1">Titik</span>}
              </p>
            </div>
@@ -128,7 +130,7 @@ const DataWilayah = () => {
            <div>
              <h3 className="text-amber-700 font-bold mb-1 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4"/> Waspada</h3>
              <p className="text-3xl font-black text-amber-800">
-               {isLoading ? <Loader2 className="w-6 h-6 animate-spin mt-2 text-amber-300" /> : summary.waspada}
+               {isLoading ? <Loader2 className="w-6 h-6 animate-spin mt-2 text-amber-300" /> : (summary?.waspada || 0)}
                {!isLoading && <span className="text-sm font-bold text-amber-600 ml-1">Titik</span>}
              </p>
            </div>
@@ -137,7 +139,7 @@ const DataWilayah = () => {
            <div>
              <h3 className="text-emerald-700 font-bold mb-1 flex items-center gap-1.5"><ShieldCheck className="w-4 h-4"/> Aman</h3>
              <p className="text-3xl font-black text-emerald-800">
-               {isLoading ? <Loader2 className="w-6 h-6 animate-spin mt-2 text-emerald-300" /> : summary.aman}
+               {isLoading ? <Loader2 className="w-6 h-6 animate-spin mt-2 text-emerald-300" /> : (summary?.aman || 0)}
                {!isLoading && <span className="text-sm font-bold text-emerald-600 ml-1">Titik</span>}
              </p>
            </div>
@@ -150,7 +152,7 @@ const DataWilayah = () => {
         </div>
       )}
       
-      {/* TABEL DATA WILAYAH (Menggunakan endpoint /districts) */}
+      {/* TABEL DATA WILAYAH AMAN */}
       <div className="overflow-x-auto flex-1 border border-slate-100 rounded-xl">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50 border-b border-slate-200">
@@ -174,33 +176,38 @@ const DataWilayah = () => {
             ) : filteredDistricts.length === 0 ? (
               <tr>
                 <td colSpan="6" className="p-10 text-center text-slate-500 text-sm font-medium">
-                  {searchQuery ? `Tidak ada wilayah yang cocok dengan pencarian "${searchQuery}"` : "Belum ada wilayah (polygon) yang ditambahkan ke sistem."}
+                  {searchQuery ? `Tidak ada wilayah yang cocok dengan pencarian "${searchQuery}"` : "Belum ada data wilayah."}
                 </td>
               </tr>
             ) : (
               filteredDistricts.map((district) => {
-                const totalLaporan = district.rawan + district.waspada + district.aman;
+                // KODE ANTI CRASH: Kalkulasi aman dari NaN (Not a Number)
+                const aman = district?.aman || 0;
+                const waspada = district?.waspada || 0;
+                const rawan = district?.rawan || 0;
+                const totalLaporan = aman + waspada + rawan;
+                const namaWilayah = district?.nama || district?.name || "Wilayah Tanpa Nama";
                 
                 return (
-                  <tr key={district.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                  <tr key={district?.id || Math.random()} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td className="p-4 text-sm font-bold text-slate-800 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-slate-400" /> {district.nama}
+                      <MapPin className="w-4 h-4 text-slate-400" /> {namaWilayah}
                     </td>
                     <td className="p-4 text-sm text-center">
-                      <span className="px-3 py-1 bg-rose-50 text-rose-700 rounded-full font-bold border border-rose-100">{district.rawan}</span>
+                      <span className="px-3 py-1 bg-rose-50 text-rose-700 rounded-full font-bold border border-rose-100">{rawan}</span>
                     </td>
                     <td className="p-4 text-sm text-center">
-                      <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-full font-bold border border-amber-100">{district.waspada}</span>
+                      <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-full font-bold border border-amber-100">{waspada}</span>
                     </td>
                     <td className="p-4 text-sm text-center">
-                      <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full font-bold border border-emerald-100">{district.aman}</span>
+                      <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full font-bold border border-emerald-100">{aman}</span>
                     </td>
                     <td className="p-4 text-sm text-center font-black text-slate-700">
                       {totalLaporan}
                     </td>
                     <td className="p-4 text-sm flex justify-end gap-2">
                       <button 
-                        onClick={() => handleDelete(district.id, district.nama)}
+                        onClick={() => handleDelete(district?.id, namaWilayah)}
                         className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors" 
                         title="Hapus Wilayah"
                       >
