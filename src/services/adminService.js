@@ -86,6 +86,50 @@ const adminService = {
       console.error('Error fetching wargas:', error);
       throw error;
     }
+  },
+
+  // 1. Ambil ringkasan wilayah (Untuk Kartu)
+  async getDistrictSummary() {
+    try {
+      const response = await api.get('/v1/admin/districts/summary');
+      return response.data.data; // Mengembalikan { rawan, waspada, aman }
+    } catch (error) {
+      console.error('Error fetching district summary:', error);
+      throw error;
+    }
+  },
+
+  // 2. Ambil daftar semua wilayah (Untuk Tabel)
+  async getDistricts() {
+    try {
+      const response = await api.get('/v1/admin/districts');
+      return response.data.data || [];
+    } catch (error) {
+      console.error('Error fetching districts:', error);
+      throw error;
+    }
+  },
+
+  // 3. Hapus Wilayah
+  async deleteDistrict(id) {
+    try {
+      const response = await api.delete(`/v1/admin/districts/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting district:', error);
+      throw error;
+    }
+  },
+
+  // 4. Sinkronkan ulang (Re-assign) laporan ke wilayah masing-masing
+  async reassignDistricts() {
+    try {
+      const response = await api.post('/v1/admin/districts/reassign');
+      return response.data;
+    } catch (error) {
+      console.error('Error reassigning districts:', error);
+      throw error;
+    }
   }
 };
 
