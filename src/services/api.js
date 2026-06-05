@@ -1,76 +1,130 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://gdgoc.skyibe.my.id/api';
+// const BASE_URL = import.meta.env.VITE_API_URL || 'https://gdgoc.skyibe.my.id/api';
+// const TOKEN_KEY = 'user_token';
+
+// const getAuthHeaders = () => {
+//   const token = localStorage.getItem(TOKEN_KEY);
+//   return token ? { Authorization: `Bearer ${token}` } : {};
+// };
+
+// const api = {
+//   async get(endpoint) {
+//     const response = await fetch(`${BASE_URL}${endpoint}`, {
+//       headers: {
+//         ...getAuthHeaders(),
+//       },
+//     });
+//     if (!response.ok) {
+//       const errorText = await response.text().catch(() => '');
+//       throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
+//     }
+//     return response.json();
+//   },
+
+//   async post(endpoint, data) {
+//     const response = await fetch(`${BASE_URL}${endpoint}`, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         ...getAuthHeaders(),
+//       },
+//       body: JSON.stringify(data),
+//     });
+//     if (!response.ok) {
+//       const errorText = await response.text().catch(() => '');
+//       throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
+//     }
+//     return response.json();
+//   },
+
+//   // DITAMBAHKAN: Fungsi PUT untuk update lokasi sesuai dokumentasi
+//   async put(endpoint, data) {
+//     const response = await fetch(`${BASE_URL}${endpoint}`, {
+//       method: 'PUT',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         ...getAuthHeaders(),
+//       },
+//       body: JSON.stringify(data),
+//     });
+//     if (!response.ok) {
+//       const errorText = await response.text().catch(() => '');
+//       throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
+//     }
+//     return response.json();
+//   },
+
+//   async postForm(endpoint, formData) {
+//     const headers = getAuthHeaders();
+//     if (!headers.Authorization) {
+//       throw new Error('Token otentikasi tidak ditemukan. Silakan masuk terlebih dahulu.');
+//     }
+
+//     const response = await fetch(`${BASE_URL}${endpoint}`, {
+//       method: 'POST',
+//       headers,
+//       body: formData,
+//     });
+
+//     if (!response.ok) {
+//       const errorText = await response.text().catch(() => '');
+//       throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
+//     }
+//     return response.json();
+//   },
+// };
+
+// export default api; 
+
+
+const BASE_URL = 'https://gdgoc.skyibe.my.id/api'; // Pastikan base path konsisten
 const TOKEN_KEY = 'user_token';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem(TOKEN_KEY);
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
 const api = {
   async get(endpoint) {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: {
-        ...getAuthHeaders(),
-      },
+      headers: { ...getAuthHeaders() },
     });
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
-    }
-    return response.json();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    return { data: json };
   },
 
   async post(endpoint, data) {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(data),
     });
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
-    }
-    return response.json();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    return { data: json };
   },
 
-  // DITAMBAHKAN: Fungsi PUT untuk update lokasi sesuai dokumentasi
   async put(endpoint, data) {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(data),
     });
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
-    }
-    return response.json();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    return { data: json };
   },
 
-  async postForm(endpoint, formData) {
-    const headers = getAuthHeaders();
-    if (!headers.Authorization) {
-      throw new Error('Token otentikasi tidak ditemukan. Silakan masuk terlebih dahulu.');
-    }
-
+  async delete(endpoint) {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: formData,
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() },
     });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ''}`);
-    }
-    return response.json();
-  },
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    return { data: json };
+  }
 };
 
 export default api;
