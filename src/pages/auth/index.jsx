@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldAlert, ChevronLeft, Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, ChevronLeft, Mail, Lock, User, ArrowRight, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import heroImg from '../../assets/hero.png';
 import AuthService from '../../services/authService';
 
@@ -13,7 +13,10 @@ const AuthPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState(''); // State baru untuk pesan sukses
+  const [successMsg, setSuccessMsg] = useState('');
+  
+  // STATE BARU: Untuk mengatur visibilitas password
+  const [showPassword, setShowPassword] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,12 +42,10 @@ const AuthPage = () => {
           password: formData.password,
         });
 
-        // AuthService otomatis menyimpan token & role. Kita ambil rolenya untuk navigasi.
         const role = response.role || localStorage.getItem('user_role') || 'user';
         let redirectPath = from;
 
         if (!redirectPath || redirectPath === '/auth' || redirectPath === '/') {
-          // Arahkan berdasarkan role ("user" adalah default warga di API)
           redirectPath = role === 'admin' ? '/admin' : role === 'kader' ? '/dashboard' : '/map';
         }
 
@@ -58,23 +59,36 @@ const AuthPage = () => {
           password: formData.password,
         });
 
-        // Jika berhasil (tidak masuk catch), tampilkan pesan sukses
         setSuccessMsg('Registrasi berhasil! Silakan masuk menggunakan akun Anda.');
-        setIsLogin(true); // Otomatis pindah ke tab Login
-        setFormData((prev) => ({ ...prev, password: '' })); // Kosongkan password demi keamanan
+        setIsLogin(true); 
+        setFormData((prev) => ({ ...prev, password: '' })); 
       }
     } catch (err) {
-      // Tangkap error dari backend (misal: "Email atau password salah" atau "Email sudah terdaftar")
-      setError(err?.message || 'Terjadi kesalahan koneksi. Silakan coba lagi.');
+      // AMBIL TEKS ERROR MENTAH
+      const rawError = err?.response?.data?.error || err?.message || String(err);
+      const lowerError = rawError.toLowerCase();
+
+      // TRANSLATE PESAN ERROR MENTAH MENJADI RAMAH PENGGUNA
+      if (lowerError.includes('duplicate key') || lowerError.includes('unique constraint') || lowerError.includes('sudah terdaftar')) {
+        setError('Email ini sudah terdaftar. Silakan gunakan email lain atau langsung Masuk.');
+      } else if (lowerError.includes('email atau password salah')) {
+        setError('Email atau password yang Anda masukkan salah.');
+      } else if (lowerError.includes('network') || lowerError.includes('failed to fetch')) {
+        setError('Gagal terhubung ke server. Periksa koneksi internet Anda.');
+      } else {
+        // Jika error terlalu panjang (seperti query SQL), ringkas pesannya
+        setError(rawError.length > 100 ? 'Terjadi kesalahan pada sistem. Silakan coba lagi.' : rawError);
+      }
+
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
     <div className="flex min-h-screen bg-white font-sans selection:bg-[#008AC9]/20">
       
+      {/* Kolom Kiri (Hanya Muncul di Layar Besar) */}
       <div className="hidden lg:flex flex-col flex-1 bg-gradient-to-br from-[#008AC9] via-[#0076ad] to-cyan-600 text-white p-12 relative overflow-hidden items-center justify-center">
         
         <div className="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none transform scale-110">
@@ -111,6 +125,7 @@ const AuthPage = () => {
         </div>
       </div>
 
+      {/* Kolom Kanan (Form) */}
       <div className="flex-1 flex flex-col justify-center p-6 md:p-12 relative bg-white overflow-y-auto">
         
         <button
@@ -151,19 +166,25 @@ const AuthPage = () => {
 
           {/* Pesan Error (Merah) */}
           {error && (
-            <div className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 text-sm rounded-2xl text-center font-bold flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
-              <ShieldAlert className="w-4 h-4" /> {error}
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 text-sm rounded-2xl text-center font-bold flex flex-col items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 shrink-0" /> 
+                <span className="text-left">{error}</span>
+              </div>
             </div>
           )}
 
-          {/* Pesan Sukses (Hijau) - Muncul setelah register berhasil */}
+          {/* Pesan Sukses (Hijau) */}
           {successMsg && (
             <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-600 text-sm rounded-2xl text-center font-bold flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
-              <CheckCircle2 className="w-4 h-4" /> {successMsg}
+              <CheckCircle2 className="w-5 h-5 shrink-0" /> 
+              <span className="text-left">{successMsg}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            
+            {/* Input Nama Lengkap (Hanya saat Daftar) */}
             {!isLogin && (
               <div className="space-y-1.5">
                 <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider ml-1">Nama Lengkap</label>
@@ -184,6 +205,7 @@ const AuthPage = () => {
               </div>
             )}
 
+            {/* Input Email */}
             <div className="space-y-1.5">
               <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider ml-1">Email</label>
               <div className="relative group">
@@ -202,6 +224,7 @@ const AuthPage = () => {
               </div>
             </div>
 
+            {/* Input Password (Dengan Show/Hide) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between ml-1">
                 <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Password</label>
@@ -212,14 +235,23 @@ const AuthPage = () => {
                   <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-[#008AC9] transition-colors" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"} // Logic pergantian tipe text/password
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Masukan password Anda"
-                  className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#008AC9] focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white outline-none transition-all text-slate-700 font-medium placeholder:font-normal placeholder:text-slate-400"
+                  className="w-full pl-11 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#008AC9] focus:ring-4 focus:ring-[#008AC9]/10 focus:bg-white outline-none transition-all text-slate-700 font-medium placeholder:font-normal placeholder:text-slate-400"
                   required
                 />
+                
+                {/* TOMBOL MATA (SHOW/HIDE) */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#008AC9] transition-colors focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
             </div>
 
@@ -232,7 +264,7 @@ const AuthPage = () => {
                 <div className="w-6 h-6 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
                 <>
-                  {isLogin ? 'Masuk ke Peta' : 'Daftar Sekarang'}
+                  {isLogin ? 'Masuk ke Sistem' : 'Daftar Sekarang'}
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
